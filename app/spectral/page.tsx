@@ -384,26 +384,33 @@ function SpectralAgentContent() {
                     </div>
                   </div>
                 ) : (
-                  <>
-                    {/* Transaction History */}
-                    <div className="pb-4 border-b border-purple-500/20">
-                      <h3 className="font-semibold text-white mb-3 font-manrope">Transaction History:</h3>
-                      <p className="text-white leading-relaxed font-manrope">
-                        There have been 6,410 buys and 2,766 sells of EKpQGSJrJMFqK29KQanSqYXRcFBfBopzLHYwdM65zqm in the last 24 hours.
+                  <div className="flex flex-col items-center justify-center h-full text-center px-8 py-12">
+                    <div className="mb-6">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-semibold text-white mb-3 font-manrope">Welcome to Spectral</h3>
+                      <p className="text-white/70 leading-relaxed font-manrope max-w-md mx-auto">
+                        Ask me anything about Solana tokens, market analysis, trading strategies, or blockchain insights. I'm here to help!
                       </p>
                     </div>
-
-                    {/* Price Prediction */}
-                    <div>
-                      <h3 className="font-semibold text-white mb-3 font-manrope">Price Prediction:</h3>
-                      <p className="text-white leading-relaxed mb-4 font-manrope">
-                        The token's price has been relatively stable with a high confidence level in the quoted prices.
-                      </p>
-                      <p className="text-white leading-relaxed font-manrope">
-                        In conclusion, considering the positive price changes, liquidity, market capitalization, and active trading volume, buying EKpQGSJrJMFqK29KQanSqYXRcFBfBopzLHYwdM65zqm could be a good option. However, as with any investment, it is important to conduct further research, analyze market trends, and consider your risk tolerance before making a decision.
-                      </p>
+                    <div className="mt-4 space-y-2">
+                      <p className="text-sm text-white/50 font-manrope">Try asking:</p>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <span className="px-3 py-1.5 text-xs text-white/60 bg-white/5 rounded-full border border-white/10 font-manrope">
+                          Market trends
+                        </span>
+                        <span className="px-3 py-1.5 text-xs text-white/60 bg-white/5 rounded-full border border-white/10 font-manrope">
+                          Token analysis
+                        </span>
+                        <span className="px-3 py-1.5 text-xs text-white/60 bg-white/5 rounded-full border border-white/10 font-manrope">
+                          Price predictions
+                        </span>
+                      </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </main>
@@ -417,7 +424,7 @@ function SpectralAgentContent() {
                   <div className="flex flex-wrap gap-2 mb-3">
                     <button
                       onClick={() => handleTabClick("claude-opus-4.1")}
-                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
                         activeTab === "claude-opus-4.1"
                           ? "text-white border border-purple-500/50"
                           : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
@@ -427,11 +434,12 @@ function SpectralAgentContent() {
                         backdropFilter: 'blur(20px)',
                       } : {}}
                     >
-                      🧠 Claude Opus 4.1
+                      <img src="/integrations/claudelogo.png" alt="Claude" className="w-4 h-4 object-contain" />
+                      Claude Opus 4.1
                     </button>
                     <button
                       onClick={() => handleTabClick("gpt-4-32k")}
-                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
                         activeTab === "gpt-4-32k"
                           ? "text-white border border-purple-500/50"
                           : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
@@ -441,11 +449,12 @@ function SpectralAgentContent() {
                         backdropFilter: 'blur(20px)',
                       } : {}}
                     >
-                      ⚡️ GPT-4 32K
+                      <img src="/integrations/openailogo.png" alt="OpenAI" className="w-4 h-4 object-contain" />
+                      GPT-4 32K
                     </button>
                     <button
                       onClick={() => handleTabClick("gpt-4.5")}
-                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
                         activeTab === "gpt-4.5"
                           ? "text-white border border-purple-500/50"
                           : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
@@ -455,11 +464,12 @@ function SpectralAgentContent() {
                         backdropFilter: 'blur(20px)',
                       } : {}}
                     >
-                      🚀 GPT-4.5
+                      <img src="/integrations/openailogo.png" alt="OpenAI" className="w-4 h-4 object-contain" />
+                      GPT-4.5
                     </button>
                     <button
                       onClick={() => handleTabClick("o1-pro")}
-                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
                         activeTab === "o1-pro"
                           ? "text-white border border-purple-500/50"
                           : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
@@ -469,11 +479,12 @@ function SpectralAgentContent() {
                         backdropFilter: 'blur(20px)',
                       } : {}}
                     >
-                      🎯 o1-pro
+                      <img src="/integrations/openailogo.png" alt="OpenAI" className="w-4 h-4 object-contain" />
+                      o1-pro
                     </button>
                     <button
                       onClick={() => handleTabClick("gemini-2.5-pro")}
-                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
                         activeTab === "gemini-2.5-pro"
                           ? "text-white border border-purple-500/50"
                           : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
@@ -483,7 +494,8 @@ function SpectralAgentContent() {
                         backdropFilter: 'blur(20px)',
                       } : {}}
                     >
-                      💎 Gemini 2.5 Pro
+                      <img src="/integrations/geminilogo.png" alt="Gemini" className="w-4 h-4 object-contain" />
+                      Gemini 2.5 Pro
                     </button>
                     </div>
                     {/* Input - Fullscreen word-doc style when typing */}
@@ -623,22 +635,22 @@ function SpectralAgentContent() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { name: "Solana", color: "purple", icon: "🟣" },
-                  { name: "Brave", color: "orange", icon: "brave-logo", isLogo: true },
-                  { name: "DeepSeek", color: "blue", icon: "🔍" },
-                  { name: "Jupiter", color: "teal", icon: "🪐" },
-                  { name: "Pumpfun", color: "green", icon: "🎈" },
-                  { name: "DEX", color: "gray", icon: "💱" }
+                  { name: "Solana", image: "/integrations/solanalogo.png" },
+                  { name: "Phantom", image: "/integrations/phantomlogo.png" },
+                  { name: "Claude", image: "/integrations/claudelogo.png" },
+                  { name: "OpenAI", image: "/integrations/openailogo.png" },
+                  { name: "Gemini", image: "/integrations/geminilogo.png" },
+                  { name: "x402", image: "/integrations/x402logo.png" }
                 ].map((integration) => (
                   <button
                     key={integration.name}
                     className="transparent-container hover:bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 transition-colors flex items-center gap-2"
                   >
-                    {integration.isLogo && integration.icon === "brave-logo" ? (
-                      <img src="/brave-logo.svg" alt="Brave" className="w-5 h-5" />
-                    ) : (
-                      <span className="text-xl">{integration.icon}</span>
-                    )}
+                    <img 
+                      src={integration.image} 
+                      alt={integration.name} 
+                      className="w-5 h-5 object-contain"
+                    />
                     <span className="text-sm font-medium text-white font-manrope">{integration.name}</span>
                   </button>
                 ))}
