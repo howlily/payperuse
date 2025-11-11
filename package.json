@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:x402": "node scripts/test-x402.js"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.14",
@@ -14,6 +15,7 @@
     "@solana/wallet-adapter-react-ui": "^0.9.39",
     "@solana/wallet-adapter-wallets": "^0.19.37",
     "@solana/web3.js": "^1.98.4",
+    "@splinetool/react-spline": "^4.1.0",
     "next": "14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

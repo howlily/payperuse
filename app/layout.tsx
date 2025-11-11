@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 
-const montserrat = Montserrat({
+const manrope = Manrope({
   subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-montserrat",
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${montserrat.variable} antialiased`} style={{ fontFamily: 'var(--font-montserrat)' }}>
+      <body className={`${manrope.variable} antialiased`} style={{ fontFamily: 'var(--font-manrope)' }}>
         {children}
       </body>
     </html>

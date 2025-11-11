@@ -90,3 +90,7 @@ storybook-static
 # Temporary folders
 tmp/
 temp/
+
+# Documentation files (except README.md)
+*.md
+!README.md

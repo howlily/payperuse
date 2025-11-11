@@ -5,35 +5,66 @@ import AnimatedBackground from "./components/AnimatedBackground";
 import { WalletContextProvider } from "./components/WalletProvider";
 import WalletButton from "./components/WalletButton";
 import { useWalletBalance } from "./hooks/useWalletBalance";
+import { useX402API } from "./hooks/useX402API";
 
 function SpectralAgentContent() {
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState("deepthink");
+  const [activeTab, setActiveTab] = useState("claude-opus-4.1");
+  const [aiResponse, setAiResponse] = useState<string>("");
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
   const { balance, tokens, loading } = useWalletBalance();
+  const { callAPI, isProcessing: isProcessingPayment } = useX402API();
+
+  const handleSendMessage = async () => {
+    if (!message.trim()) return;
+
+    setIsLoadingAI(true);
+    setAiResponse("");
+
+    try {
+      const result = await callAPI("/api/ai", {
+        method: "POST",
+        body: JSON.stringify({
+          message,
+          model: activeTab,
+        }),
+      });
+
+      if (result.error) {
+        setAiResponse(`Error: ${result.error}`);
+      } else if (result.data) {
+        setAiResponse(result.data.response || JSON.stringify(result.data, null, 2));
+      }
+    } catch (error) {
+      setAiResponse(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 relative overflow-hidden">
+    <div className="min-h-screen bg-black relative overflow-hidden">
       <AnimatedBackground />
       {/* Full Width Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 px-6 py-4 shadow-sm relative z-10">
+      <header className="bg-black/90 backdrop-blur-md border-b border-teal-900/50 px-6 py-4 shadow-sm relative z-10">
         <div className="max-w-[1500px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-400 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Spectral</h1>
-              <p className="text-sm text-gray-500">Interactive WebApp</p>
+              <h1 className="text-xl font-bold text-white">Spectral</h1>
+              <p className="text-sm text-gray-400">Interactive WebApp</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 font-mono bg-orange-50 px-4 py-2 rounded-lg border border-orange-200">
+            <span className="text-sm text-gray-300 font-mono bg-gray-900 px-4 py-2 rounded-lg border border-teal-900/50">
               3wfYscRpEGAkoGCxgyaXTDb0byPZCXxXheLxeX2ypuep
             </span>
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button className="p-2 hover:bg-gray-900 rounded-lg">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </button>
@@ -47,12 +78,12 @@ function SpectralAgentContent() {
           {/* Main Windowed Container */}
           <div className="flex-1">
             {/* Main Content Area */}
-            <div className="flex gap-4 bg-gray-100/80 backdrop-blur-sm border border-gray-200 rounded-t-2xl p-6 shadow-lg" style={{ height: "650px" }}>
+            <div className="flex gap-4 bg-gray-900/80 backdrop-blur-sm border border-teal-900/50 rounded-t-2xl p-6 shadow-lg" style={{ height: "650px" }}>
             {/* Left Sidebar */}
-            <aside className="w-80 bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-gray-200 p-6 overflow-y-auto flex flex-col">
+            <aside className="w-80 bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-900/50 p-6 overflow-y-auto flex flex-col">
               <div className="flex-1">
                 {/* SOL Balance */}
-                <div className="mb-4 pb-4 border-b border-gray-200">
+                <div className="mb-4 pb-4 border-b border-teal-900/50">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4" viewBox="0 0 646 96" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -74,17 +105,17 @@ function SpectralAgentContent() {
                           </linearGradient>
                         </defs>
                       </svg>
-                      <h2 className="text-sm font-semibold text-gray-900">SOL Balance</h2>
+                      <h2 className="text-sm font-semibold text-white">SOL Balance</h2>
                     </div>
-                    <button className="p-1 hover:bg-gray-100 rounded">
-                      <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button className="p-1 hover:bg-gray-800 rounded">
+                      <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
                     </button>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                    <p className="text-xs text-gray-600 mb-0.5">Balance</p>
-                    <p className="text-lg font-bold text-gray-900">
+                  <div className="bg-gray-800 rounded-lg p-3 border border-teal-900/50">
+                    <p className="text-xs text-gray-400 mb-0.5">Balance</p>
+                    <p className="text-lg font-bold text-white">
                       {loading ? "..." : balance.toFixed(4)} SOL
                     </p>
                   </div>
@@ -94,37 +125,37 @@ function SpectralAgentContent() {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-purple-500" fill="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-teal-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M12 1c.55 0 1 .45 1 1v2c0 .55-.45 1-1 1s-1-.45-1-1V2c0-.55.45-1 1-1zm0 16c.55 0 1 .45 1 1v2c0 .55-.45 1-1 1s-1-.45-1-1v-2c0-.55.45-1 1-1zm9-5c.55 0 1 .45 1 1s-.45 1-1 1h-2c-.55 0-1-.45-1-1s.45-1 1-1h2zM5 12c0-.55-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1z" opacity="0.3"/>
                       </svg>
-                      <h2 className="text-sm font-semibold text-gray-900">Tokens</h2>
+                      <h2 className="text-sm font-semibold text-white">Tokens</h2>
                     </div>
-                    <button className="p-1 hover:bg-gray-100 rounded">
-                      <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button className="p-1 hover:bg-gray-800 rounded">
+                      <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
                     </button>
                   </div>
                   <div className="space-y-2">
                     {loading ? (
-                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-500">Loading tokens...</p>
+                      <div className="bg-gray-800 rounded-lg p-3 border border-teal-900/50">
+                        <p className="text-xs text-gray-400">Loading tokens...</p>
                       </div>
                     ) : tokens.length === 0 ? (
-                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-500">No tokens found</p>
+                      <div className="bg-gray-800 rounded-lg p-3 border border-teal-900/50">
+                        <p className="text-xs text-gray-400">No tokens found</p>
                       </div>
                     ) : (
                       tokens.slice(0, 5).map((token, index) => (
-                        <div key={token.mint} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div key={token.mint} className="bg-gray-800 rounded-lg p-3 border border-teal-900/50">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-semibold text-gray-900">
+                              <p className="text-sm font-semibold text-white">
                                 {token.mint.slice(0, 4)}...{token.mint.slice(-4)}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-400">
                                 {token.uiAmount.toLocaleString()}
                               </p>
                             </div>
@@ -137,72 +168,115 @@ function SpectralAgentContent() {
               </div>
 
               {/* Wallet Connection at Bottom */}
-              <div className="mt-auto pt-4 border-t border-gray-200">
+              <div className="mt-auto pt-4 border-t border-teal-900/50">
                 <WalletButton />
               </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-gray-200 p-6 overflow-y-auto">
+            <main className="flex-1 bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-900/50 p-6 overflow-y-auto">
               <div className="space-y-4">
-                {/* Transaction History */}
-                <div className="pb-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900 mb-3">Transaction History:</h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    There have been 6,410 buys and 2,766 sells of EKpQGSJrJMFqK29KQanSqYXRcFBfBopzLHYwdM65zqm in the last 24 hours.
-                  </p>
-                </div>
+                {isProcessingPayment && (
+                  <div className="bg-teal-900/30 border border-teal-500/50 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-teal-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <p className="text-sm text-teal-400 font-medium">Processing x402 payment...</p>
+                    </div>
+                  </div>
+                )}
 
-                {/* Price Prediction */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Price Prediction:</h3>
-                  <p className="text-gray-700 leading-relaxed mb-4">
-                    The token's price has been relatively stable with a high confidence level in the quoted prices.
-                  </p>
-                  <p className="text-gray-700 leading-relaxed">
-                    In conclusion, considering the positive price changes, liquidity, market capitalization, and active trading volume, buying EKpQGSJrJMFqK29KQanSqYXRcFBfBopzLHYwdM65zqm could be a good option. However, as with any investment, it is important to conduct further research, analyze market trends, and consider your risk tolerance before making a decision.
-                  </p>
-                </div>
+                {aiResponse ? (
+                  <div className="pb-4 border-b border-teal-900/50">
+                    <h3 className="font-semibold text-white mb-3">AI Response:</h3>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                      <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{aiResponse}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Transaction History */}
+                    <div className="pb-4 border-b border-teal-900/50">
+                      <h3 className="font-semibold text-white mb-3">Transaction History:</h3>
+                      <p className="text-gray-300 leading-relaxed">
+                        There have been 6,410 buys and 2,766 sells of EKpQGSJrJMFqK29KQanSqYXRcFBfBopzLHYwdM65zqm in the last 24 hours.
+                      </p>
+                    </div>
+
+                    {/* Price Prediction */}
+                    <div>
+                      <h3 className="font-semibold text-white mb-3">Price Prediction:</h3>
+                      <p className="text-gray-300 leading-relaxed mb-4">
+                        The token's price has been relatively stable with a high confidence level in the quoted prices.
+                      </p>
+                      <p className="text-gray-300 leading-relaxed">
+                        In conclusion, considering the positive price changes, liquidity, market capitalization, and active trading volume, buying EKpQGSJrJMFqK29KQanSqYXRcFBfBopzLHYwdM65zqm could be a good option. However, as with any investment, it is important to conduct further research, analyze market trends, and consider your risk tolerance before making a decision.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </main>
           </div>
 
             {/* Bottom Chat Interface */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-b-2xl border border-t-0 border-gray-200 p-4 shadow-lg">
+            <div className="bg-gray-900/95 backdrop-blur-sm rounded-b-2xl border border-t-0 border-teal-900/50 p-4 shadow-lg">
               <div className="flex items-end gap-4">
                 {/* Chat Interface */}
                 <div className="flex-1">
                   {/* Tabs */}
-                  <div className="flex gap-2 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-3">
                     <button
-                      onClick={() => setActiveTab("base")}
+                      onClick={() => setActiveTab("claude-opus-4.1")}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        activeTab === "base"
-                          ? "bg-gray-200 text-gray-900"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-150"
+                        activeTab === "claude-opus-4.1"
+                          ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-black"
+                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
                       }`}
                     >
-                      ❄️ Base v2
+                      🧠 Claude Opus 4.1
                     </button>
                     <button
-                      onClick={() => setActiveTab("deepthink")}
+                      onClick={() => setActiveTab("gpt-4-32k")}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        activeTab === "deepthink"
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-150"
+                        activeTab === "gpt-4-32k"
+                          ? "bg-gray-800 text-white"
+                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
                       }`}
                     >
-                      🧠 Deepthink R1
+                      ⚡ GPT-4 32K
                     </button>
                     <button
-                      onClick={() => setActiveTab("internet")}
+                      onClick={() => setActiveTab("gpt-4.5")}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        activeTab === "internet"
-                          ? "bg-gray-200 text-gray-900"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-150"
+                        activeTab === "gpt-4.5"
+                          ? "bg-gray-800 text-white"
+                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
                       }`}
                     >
-                      🌐 Internet Agent
+                      🚀 GPT-4.5
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("o1-pro")}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === "o1-pro"
+                          ? "bg-gray-800 text-white"
+                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+                      }`}
+                    >
+                      🎯 o1-pro
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("gemini-2.5-pro")}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === "gemini-2.5-pro"
+                          ? "bg-gray-800 text-white"
+                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
+                      }`}
+                    >
+                      💎 Gemini 2.5 Pro
                     </button>
                   </div>
 
@@ -212,13 +286,24 @@ function SpectralAgentContent() {
                       type="text"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Type your message in deepthink mode..."
-                      className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder={`Type your message for ${activeTab}...`}
+                      className="flex-1 px-4 py-3 bg-gray-800 border border-teal-900/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-gray-500"
                     />
-                    <button className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!message || isLoadingAI || isProcessingPayment}
+                      className="px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-black rounded-lg hover:from-teal-400 hover:to-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoadingAI || isProcessingPayment ? (
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -229,8 +314,8 @@ function SpectralAgentContent() {
           {/* Right Sidebar - Outside Main Window */}
           <aside className="w-80 flex flex-col gap-4">
             {/* Suggestions */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 mb-4">Suggestions</h2>
+            <div className="bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-900/50 p-5">
+              <h2 className="font-semibold text-white mb-4">Suggestions</h2>
               <div className="space-y-2">
                 {[
                   "Ask about market analysis and trends",
@@ -244,7 +329,7 @@ function SpectralAgentContent() {
                 ].map((suggestion, index) => (
                   <button
                     key={index}
-                    className="w-full text-left text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
+                    className="w-full text-left text-sm text-gray-400 hover:text-teal-400 hover:bg-teal-900/20 px-3 py-2 rounded-lg transition-colors"
                   >
                     · {suggestion}
                   </button>
@@ -253,15 +338,15 @@ function SpectralAgentContent() {
             </div>
 
             {/* Integrations */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-gray-200 p-5">
+            <div className="bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-900/50 p-5">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-5 h-5 bg-teal-900/50 rounded-full flex items-center justify-center">
+                  <svg className="w-3 h-3 text-teal-400" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M13 7H7v6h6V7z" />
                     <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <h2 className="font-semibold text-gray-900">Integrations</h2>
+                <h2 className="font-semibold text-white">Integrations</h2>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -274,10 +359,10 @@ function SpectralAgentContent() {
                 ].map((integration) => (
                   <button
                     key={integration.name}
-                    className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-3 transition-colors flex items-center gap-2"
+                    className="bg-gray-800 hover:bg-gray-800/80 border border-teal-900/50 rounded-lg p-3 transition-colors flex items-center gap-2"
                   >
                     <span className="text-xl">{integration.icon}</span>
-                    <span className="text-sm font-medium text-gray-700">{integration.name}</span>
+                    <span className="text-sm font-medium text-gray-300">{integration.name}</span>
                   </button>
                 ))}
               </div>

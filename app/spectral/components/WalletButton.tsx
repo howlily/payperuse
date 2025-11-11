@@ -19,7 +19,7 @@ export default function WalletButton() {
     return (
       <button
         onClick={() => setVisible(true)}
-        className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg"
+        className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg"
       >
         Connect Wallet
       </button>
@@ -30,7 +30,7 @@ export default function WalletButton() {
     return (
       <button
         onClick={() => setVisible(true)}
-        className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg"
+        className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg"
       >
         Connect Wallet
       </button>
@@ -40,7 +40,7 @@ export default function WalletButton() {
   return (
     <button
       onClick={disconnect}
-      className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 shadow-sm transition-colors w-full group"
+      className="bg-gray-800 hover:bg-gray-800/80 border border-teal-900/50 rounded-lg px-4 py-3 shadow-sm transition-colors w-full group"
       title="Click to disconnect"
     >
       <div className="flex items-center gap-3">
@@ -53,9 +53,9 @@ export default function WalletButton() {
             className="rounded w-6 h-6"
           />
         ) : (
-          <div className="w-6 h-6 bg-purple-500 rounded"></div>
+          <div className="w-6 h-6 bg-gradient-to-br from-teal-500 to-emerald-500 rounded"></div>
         )}
-        <span className="text-sm font-mono font-semibold text-gray-900 group-hover:text-gray-700">
+        <span className="text-sm font-mono font-semibold text-white group-hover:text-teal-400">
           {shortAddress}
         </span>
       </div>

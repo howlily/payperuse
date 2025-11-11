@@ -50,11 +50,12 @@ export default function AnimatedBackground() {
         this.pulsePhase = Math.random() * Math.PI * 2;
         
         const colors = [
-          { r: 216, g: 180, b: 254 },  // purple-300
-          { r: 233, g: 213, b: 255 },  // purple-200
-          { r: 243, g: 232, b: 255 },  // purple-100
-          { r: 192, g: 132, b: 252 },  // purple-400
-          { r: 221, g: 214, b: 254 },  // purple-200 variant
+          { r: 20, g: 184, b: 166 },   // teal-500
+          { r: 16, g: 185, b: 129 },   // emerald-500
+          { r: 5, g: 150, b: 105 },    // emerald-600
+          { r: 13, g: 148, b: 136 },   // teal-600
+          { r: 6, g: 182, b: 212 },    // cyan-500
+          { r: 34, g: 197, b: 94 },    // green-500
         ];
         this.color = colors[Math.floor(Math.random() * colors.length)];
       }
@@ -128,8 +129,8 @@ export default function AnimatedBackground() {
     // Animation loop
     let animationId: number;
     const animate = () => {
-      // Clear canvas
-      ctx.fillStyle = "rgba(249, 250, 251, 0.1)";
+      // Clear canvas with dark background
+      ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Update and draw particles

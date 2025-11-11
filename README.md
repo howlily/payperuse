@@ -1,120 +1,69 @@
-# x402app - Next.js Application
+# x402app - Pay-As-You-Go LLM Access
 
-A modern, production-ready Next.js application built with React 18, TypeScript, and Tailwind CSS.
+A modern web application that provides pay-as-you-go access to premium LLM models using the x402 payment protocol on Solana. No subscriptions, no API keys needed - just connect your wallet and pay per use.
 
-## Features
+## What is x402app?
 
-- ⚡ **Next.js 14** - Latest version with App Router
-- ⚛️ **React 18** - Modern React features
-- 🔷 **TypeScript** - Full type safety
-- 🎨 **Tailwind CSS** - Utility-first CSS framework
-- 🌙 **Dark Mode** - Built-in dark mode support
-- 📱 **Responsive** - Mobile-first design
-- 🚀 **Fast** - Optimized for performance
-- 💼 **Solana Wallet Integration** - Connect with Phantom, Solflare, and more
-- 🎨 **Montserrat Font** - Clean, modern typography
-- ✨ **Animated Background** - Interactive particle effects
+x402app is a decentralized AI assistant platform that lets you access premium LLM models (Claude Opus, GPT-4, o1-pro, Gemini) without monthly subscriptions or API key management. Simply connect your Solana wallet, pay with USDC via x402 protocol, and get instant access to the world's best AI models.
 
-## Getting Started
+## Key Features
 
-### Prerequisites
+### 🚀 Pay-As-You-Go Model
+- **No Subscriptions**: Pay only for what you use
+- **No API Keys**: Users never need to manage API keys
+- **Instant Payments**: 200ms payment processing via Solana
+- **Token-Based Pricing**: Costs calculated dynamically based on actual usage
 
-- Node.js 18+ installed on your machine
-- npm, yarn, or pnpm package manager
+### 🧠 Premium LLM Models
+Access the world's most advanced AI models:
 
-### Installation
+- **Claude Opus 4.1** (🧠): Anthropic's most advanced reasoning model - Best for complex reasoning tasks
+- **GPT-4 32K** (⚡): OpenAI GPT-4 with 32K context window - Excellent for long documents
+- **GPT-4.5** (🚀): OpenAI's latest GPT-4o model - Most capable for general tasks
+- **o1-pro** (🎯): OpenAI's reasoning model - Optimized for step-by-step problem solving
+- **Gemini 2.5 Pro** (💎): Google's advanced model - Great for multimodal tasks
 
-1. Install dependencies:
+### 💰 Transparent Pricing
+- **Dynamic Cost Calculation**: Prices based on actual token usage (input + output)
+- **No Hidden Fees**: See exactly what you'll pay before each request
+- **Fair Pricing**: Only pay for tokens actually used
 
-```bash
-npm install
-# or
-yarn install
-# or
-pnpm install
-```
+### 🔒 Privacy-First
+- **Autonomous Agents**: No account creation required
+- **Wallet-Based**: Your wallet is your identity
+- **Encrypted**: All communications secured via x402 protocol
 
-2. Run the development server:
+## How It Works
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
+1. **Connect Your Wallet**: Use any Solana wallet (Phantom, Solflare, etc.)
+2. **Select a Model**: Choose from Claude Opus, GPT-4, o1-pro, or Gemini
+3. **Send Your Message**: Type your query and submit
+4. **Automatic Payment**: x402 handles payment verification (USDC on Solana)
+5. **Get Response**: Receive AI response instantly
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.
+## Technology Stack
 
-### Pages
+- **Next.js 14** - Modern React framework with App Router
+- **TypeScript** - Full type safety
+- **Tailwind CSS** - Beautiful, responsive UI
+- **Solana Web3.js** - Blockchain integration
+- **x402 Protocol** - Internet-native payment standard
+- **USDC on Solana** - Stablecoin payments
 
-- **Home**: [http://localhost:3000](http://localhost:3000) - Landing page
-- **Spectral**: [http://localhost:3000/spectral](http://localhost:3000/spectral) - Solana blockchain AI assistant
+## Ecosystem & Partners
 
-### Building for Production
-
-To create a production build:
-
-```bash
-npm run build
-npm run start
-```
-
-## Project Structure
-
-```
-x402app/
-├── app/                    # Next.js App Router directory
-│   ├── layout.tsx         # Root layout component
-│   ├── page.tsx           # Home page
-│   └── globals.css        # Global styles
-├── public/                # Static assets
-├── next.config.js         # Next.js configuration
-├── tailwind.config.ts     # Tailwind CSS configuration
-├── tsconfig.json          # TypeScript configuration
-└── package.json           # Project dependencies
-```
-
-## Customization
-
-### Styling
-
-This project uses Tailwind CSS. You can customize the design system by editing:
-- `tailwind.config.ts` - Tailwind configuration
-- `app/globals.css` - Global styles and CSS variables
-
-### Pages
-
-- Edit `app/page.tsx` to modify the home page
-- **Spectral Agent** (`/spectral`) - Solana blockchain AI assistant with wallet integration
-- Create new pages by adding files to the `app/` directory
-- Learn more about [App Router](https://nextjs.org/docs/app)
-
-### Solana Wallet Connection
-
-The Spectral Agent page includes integrated Solana wallet functionality:
-
-- **Supported Wallets**: Phantom, Solflare, Torus, Ledger
-- **Network**: Currently configured for Solana Devnet
-- **Auto-Connect**: Automatically reconnects to previously connected wallets
-- To change network, edit `app/spectral/components/WalletProvider.tsx`
-
-To use wallet features:
-1. Navigate to `/spectral`
-2. Click "Connect Wallet" button
-3. Select your preferred wallet from the modal
-4. Approve the connection in your wallet extension
+Built for the Solana ecosystem with support for:
+- Solana Blockchain
+- x402 Payment Protocol
+- USDC Stablecoin
+- Solana Wallet Adapter
 
 ## Learn More
 
-To learn more about the technologies used:
-
+- [x402 Protocol on Solana](https://solana.com/developers/guides/getstarted/intro-to-x402)
 - [Next.js Documentation](https://nextjs.org/docs)
-- [React Documentation](https://react.dev)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [Solana Documentation](https://docs.solana.com/)
 
 ## License
 
 MIT
-
