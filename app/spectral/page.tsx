@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import AnimatedBackground from "./components/AnimatedBackground";
+import { useState, useEffect, useRef } from "react";
 import { WalletContextProvider } from "./components/WalletProvider";
 import WalletButton from "./components/WalletButton";
+import LoadingScreen from "./components/LoadingScreen";
 import { useWalletBalance } from "./hooks/useWalletBalance";
 import { useX402API } from "./hooks/useX402API";
 
@@ -12,11 +12,63 @@ function SpectralAgentContent() {
   const [activeTab, setActiveTab] = useState("claude-opus-4.1");
   const [aiResponse, setAiResponse] = useState<string>("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [clickedTab, setClickedTab] = useState<string | null>(null);
+  const [caCopied, setCaCopied] = useState(false);
+  const [caCentered, setCaCentered] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { balance, tokens, loading } = useWalletBalance();
   const { callAPI, isProcessing: isProcessingPayment } = useX402API();
 
+  const handleTabClick = (tab: string) => {
+    setClickedTab(tab);
+    setActiveTab(tab);
+    setTimeout(() => setClickedTab(null), 300);
+  };
+
+  const handleCAClick = async () => {
+    const address = "3wfYscRpEGAkoGCxgyaXTDb0byPZCXxXheLxeX2ypuep";
+    try {
+      await navigator.clipboard.writeText(address);
+      setCaCopied(true);
+      setCaCentered(true);
+      setTimeout(() => setCaCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Start typing animation if there's text
+    if (value.length > 0) {
+      if (!isTyping) {
+        setIsTyping(true);
+      }
+      // Set timeout to reset after 5 seconds of no typing
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+      }, 5000);
+    } else {
+      // If message is cleared, immediately reset typing state
+      setIsTyping(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!message.trim()) return;
+
+    setIsTyping(false);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
 
     setIsLoadingAI(true);
     setAiResponse("");
@@ -42,70 +94,208 @@ function SpectralAgentContent() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      <AnimatedBackground />
-      {/* Full Width Header */}
-      <header className="bg-black/90 backdrop-blur-md border-b border-teal-900/50 px-6 py-4 shadow-sm relative z-10">
-        <div className="max-w-[1500px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-400 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">Spectral</h1>
-              <p className="text-sm text-gray-400">Interactive WebApp</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-300 font-mono bg-gray-900 px-4 py-2 rounded-lg border border-teal-900/50">
-              3wfYscRpEGAkoGCxgyaXTDb0byPZCXxXheLxeX2ypuep
-            </span>
-            <button className="p-2 hover:bg-gray-900 rounded-lg">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
-      {/* Main Content Below Header */}
-      <div className="p-6 relative z-10">
-        <div className="flex gap-4 max-w-[1500px] mx-auto">
+  const [splineLoaded, setSplineLoaded] = useState(false);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@splinetool/viewer@1.10.99/build/spline-viewer.js';
+    script.type = 'module';
+    script.onload = () => setSplineLoaded(true);
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, []);
+
+  const scrollToChat = () => {
+    const chatSection = document.getElementById('chat-section');
+    if (chatSection) {
+      chatSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-black relative overflow-x-hidden font-manrope">
+      <LoadingScreen />
+      {splineLoaded && (
+        <>
+          {/* @ts-ignore - spline-viewer is a custom element */}
+          <spline-viewer
+            url="https://prod.spline.design/2eYe3ADwe-ruRfl6/scene.splinecode"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 0,
+              pointerEvents: 'none'
+            }}
+          />
+        </>
+      )}
+      
+      {/* CA Badge */}
+      <div 
+        className={`floating-ca ${caCentered ? 'ca-centered' : ''}`}
+        onClick={handleCAClick}
+      >
+        <span className="text-xs font-medium text-white/80 font-manrope tracking-wider">
+          {caCopied ? 'Copied!' : '3wfYscRpEGAkoGCxgyaXTDb0byPZCXxXheLxeX2ypuep'}
+        </span>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="relative z-10">
+        {/* Pricing Section - Smaller, positioned above chat */}
+        <section className="flex items-end justify-center px-6 pt-32 pb-8">
+          <div className="max-w-5xl mx-auto w-full">
+            <h2 className="text-3xl font-medium text-white text-center mb-8 font-manrope">Pricing</h2>
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Free Plan */}
+              <div 
+                className="transparent-container rounded-xl p-5 transition-all duration-300"
+                style={{
+                  background: 'rgba(168, 85, 247, 0.04)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(236, 72, 153, 0.1)'
+                }}
+              >
+                <h3 className="text-lg font-semibold text-white mb-1 font-manrope">Free</h3>
+                <div className="text-2xl font-bold text-white mb-3 font-manrope">$0<span className="text-sm text-white/60">/month</span></div>
+                <ul className="space-y-2 mb-6">
+                  <li className="text-white/80 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> 10 API calls/day
+                  </li>
+                  <li className="text-white/80 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> Basic AI models
+                  </li>
+                  <li className="text-white/80 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> Community support
+                  </li>
+                </ul>
+                <button
+                  onClick={scrollToChat}
+                  className="w-full px-4 py-2 transparent-container border border-emerald-500/30 rounded-lg text-white text-sm font-manrope font-medium hover:border-emerald-500/50 transition-all"
+                >
+                  Get Started
+                </button>
+              </div>
+              {/* Basic Plan - Coming Soon */}
+              <div 
+                className="transparent-container rounded-xl p-5 opacity-50"
+                style={{
+                  background: 'rgba(168, 85, 247, 0.02)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(236, 72, 153, 0.05)'
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-lg font-semibold text-white/60 font-manrope">Basic</h3>
+                  <span className="text-xs text-white/40 bg-white/5 px-2 py-0.5 rounded font-manrope">Coming Soon</span>
+                </div>
+                <div className="text-2xl font-bold text-white/60 mb-3 font-manrope">$29<span className="text-sm text-white/40">/month</span></div>
+                <ul className="space-y-2 mb-6">
+                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> 1,000 API calls/month
+                  </li>
+                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> All AI models
+                  </li>
+                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> Priority support
+                  </li>
+                </ul>
+                <button 
+                  disabled
+                  className="w-full px-4 py-2 transparent-container border border-white/10 rounded-lg text-white/40 text-sm font-manrope font-medium cursor-not-allowed"
+                >
+                  Coming Soon
+                </button>
+              </div>
+
+              {/* Pro Plan - Coming Soon */}
+              <div 
+                className="transparent-container rounded-xl p-5 opacity-50"
+                style={{
+                  background: 'rgba(168, 85, 247, 0.02)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(236, 72, 153, 0.05)'
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-lg font-semibold text-white/60 font-manrope">Pro</h3>
+                  <span className="text-xs text-white/40 bg-white/5 px-2 py-0.5 rounded font-manrope">Coming Soon</span>
+                </div>
+                <div className="text-2xl font-bold text-white/60 mb-3 font-manrope">$99<span className="text-sm text-white/40">/month</span></div>
+                <ul className="space-y-2 mb-6">
+                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> Unlimited API calls
+                  </li>
+                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> All AI models + custom
+                  </li>
+                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
+                    <span>✓</span> 24/7 support
+                  </li>
+                </ul>
+                <button 
+                  disabled
+                  className="w-full px-4 py-2 transparent-container border border-white/10 rounded-lg text-white/40 text-sm font-manrope font-medium cursor-not-allowed"
+                >
+                  Coming Soon
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+        {/* Chat Interface Section - At Bottom */}
+        <section id="chat-section" className="min-h-screen flex items-start justify-center px-6 pt-0 pb-20 relative">
+          <div className="w-full max-w-[1500px] mx-auto relative z-30">
+            <div className="flex gap-4">
           {/* Main Windowed Container */}
           <div className="flex-1">
             {/* Main Content Area */}
-            <div className="flex gap-4 bg-gray-900/80 backdrop-blur-sm border border-teal-900/50 rounded-t-2xl p-6 shadow-lg" style={{ height: "650px" }}>
+            <div className="flex gap-4 transparent-container rounded-2xl p-6" style={{ height: "650px" }}>
             {/* Left Sidebar */}
-            <aside className="w-80 bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-900/50 p-6 overflow-y-auto flex flex-col">
+            <aside className="w-80 transparent-container rounded-xl p-6 overflow-y-auto flex flex-col">
               <div className="flex-1">
                 {/* SOL Balance */}
-                <div className="mb-4 pb-4 border-b border-teal-900/50">
+                <div className="mb-4 pb-4 border-b border-purple-500/30">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4" viewBox="0 0 646 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M108.53 75.6899L90.81 94.6899C90.4267 95.1026 89.9626 95.432 89.4464 95.6573C88.9303 95.8827 88.3732 95.9994 87.81 95.9994C87.2469 95.9994 86.6898 95.8827 86.1736 95.6573C85.6575 95.432 85.1934 95.1026 84.81 94.6899L1.81002 5.68994C1.42668 5.27721 1.13103 4.78575 0.942416 4.24703C0.753798 3.70831 0.675781 3.13424 0.713706 2.56178C0.751631 1.98932 0.904794 1.43073 1.16393 0.920741C1.42307 0.410748 1.7833 -0.0764674 2.22165 -0.539936L19.9417 -19.5399C20.325 -19.9526 20.7891 -20.282 21.3053 -20.5074C21.8214 -20.7327 22.3785 -20.8494 22.9417 -20.8494C23.5048 -20.8494 24.0619 -20.7327 24.5781 -20.5074C25.0942 -20.282 25.5583 -19.9526 25.9417 -19.5399L108.53 69.3099C108.914 69.7226 109.209 70.2141 109.398 70.7528C109.587 71.2915 109.665 71.8656 109.627 72.438C109.589 73.0105 109.436 73.5691 109.177 74.0791C108.918 74.589 108.558 75.0363 108.12 75.4999L108.53 75.6899Z" fill="url(#paint0_linear)"/>
-                        <path d="M108.53 20.59L90.81 1.59003C90.4267 1.17729 89.9626 0.847922 89.4464 0.622547C88.9303 0.397173 88.3732 0.280518 87.81 0.280518C87.2469 0.280518 86.6898 0.397173 86.1736 0.622547C85.6575 0.847922 85.1934 1.17729 84.81 1.59003L1.81002 90.59C1.42668 91.0028 1.13103 91.4942 0.942416 92.033C0.753798 92.5717 0.675781 93.1458 0.713706 93.7182C0.751631 94.2907 0.904794 94.8493 1.16393 95.3593C1.42307 95.8693 1.7833 96.3165 2.22165 96.78L19.9417 115.78C20.325 116.193 20.7891 116.522 21.3053 116.747C21.8214 116.973 22.3785 117.089 22.9417 117.089C23.5048 117.089 24.0619 116.973 24.5781 116.747C25.0942 116.522 25.5583 116.193 25.9417 115.78L108.53 26.93C108.914 26.5173 109.209 26.0258 109.398 25.4871C109.587 24.9484 109.665 24.3743 109.627 23.8019C109.589 23.2294 109.436 22.6708 109.177 22.1608C108.918 21.6509 108.558 21.2036 108.12 20.74L108.53 20.59Z" fill="url(#paint1_linear)"/>
-                        <path d="M90.81 37.8401L1.81002 48.1501C1.23328 48.2199 0.675841 48.4068 0.169863 48.7C-0.336116 48.9932 -0.883598 49.3872 -1.34521 49.8606C-1.80682 50.334 -2.17282 50.8784 -2.42577 51.4674C-2.67872 52.0563 -2.81425 52.68 -2.82617 53.3101V64.0701C-2.82617 65.3401 -2.32617 66.5501 -1.42617 67.4501C-0.526172 68.3501 0.673828 68.8501 1.94383 68.8501L90.9438 58.5401C91.5206 58.4703 92.078 58.2834 92.584 57.9902C93.09 57.697 93.6375 57.303 94.0991 56.8296C94.5607 56.3562 94.9267 55.8118 95.1797 55.2228C95.4326 54.6339 95.5681 54.0102 95.5801 53.3801V42.6201C95.5801 41.3501 95.0801 40.1401 94.1801 39.2401C93.2801 38.3401 92.0801 37.8401 90.8101 37.8401H90.81Z" fill="url(#paint2_linear)"/>
+                      <svg className="w-4 h-4" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        {/* Top parallelogram - cyan to green */}
+                        <path d="M1 1.5 L6 0.5 L19 0.5 L14 1.5 Z" fill="url(#solana-gradient-1)"/>
+                        {/* Middle parallelogram - purple-blue to azure */}
+                        <path d="M1 6.5 L6 5.5 L19 5.5 L14 6.5 Z" fill="url(#solana-gradient-2)"/>
+                        {/* Bottom parallelogram - deep purple to medium purple-blue */}
+                        <path d="M1 11.5 L6 10.5 L19 10.5 L14 11.5 Z" fill="url(#solana-gradient-3)"/>
                         <defs>
-                          <linearGradient id="paint0_linear" x1="94.4099" y1="-8.14014" x2="14.5299" y2="83.8299" gradientUnits="userSpaceOnUse">
-                            <stop offset="0" stopColor="#00FFA3"/>
-                            <stop offset="1" stopColor="#DC1FFF"/>
+                          <linearGradient id="solana-gradient-1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#00D9FF"/>
+                            <stop offset="100%" stopColor="#14F195"/>
                           </linearGradient>
-                          <linearGradient id="paint1_linear" x1="15.3699" y1="104.48" x2="95.2599" y2="12.6201" gradientUnits="userSpaceOnUse">
-                            <stop offset="0" stopColor="#00FFA3"/>
-                            <stop offset="1" stopColor="#DC1FFF"/>
+                          <linearGradient id="solana-gradient-2" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#9945FF"/>
+                            <stop offset="100%" stopColor="#00D9FF"/>
                           </linearGradient>
-                          <linearGradient id="paint2_linear" x1="5.34009" y1="53.1101" x2="88.0601" y2="53.1101" gradientUnits="userSpaceOnUse">
-                            <stop offset="0" stopColor="#00FFA3"/>
-                            <stop offset="1" stopColor="#DC1FFF"/>
+                          <linearGradient id="solana-gradient-3" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#6A00FF"/>
+                            <stop offset="100%" stopColor="#9945FF"/>
                           </linearGradient>
                         </defs>
                       </svg>
-                      <h2 className="text-sm font-semibold text-white">SOL Balance</h2>
+                      <h2 className="text-sm font-semibold text-white font-manrope">SOL Balance</h2>
                     </div>
                     <button className="p-1 hover:bg-gray-800 rounded">
                       <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,14 +303,13 @@ function SpectralAgentContent() {
                       </svg>
                     </button>
                   </div>
-                  <div className="bg-gray-800 rounded-lg p-3 border border-teal-900/50">
-                    <p className="text-xs text-gray-400 mb-0.5">Balance</p>
-                    <p className="text-lg font-bold text-white">
+                  <div className="transparent-container rounded-lg p-3 border border-purple-500/20">
+                    <p className="text-xs text-gray-200 mb-0.5 font-manrope">Balance</p>
+                    <p className="text-lg font-bold text-white font-manrope">
                       {loading ? "..." : balance.toFixed(4)} SOL
                     </p>
                   </div>
                 </div>
-
                 {/* Tokens */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
@@ -130,7 +319,7 @@ function SpectralAgentContent() {
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M12 1c.55 0 1 .45 1 1v2c0 .55-.45 1-1 1s-1-.45-1-1V2c0-.55.45-1 1-1zm0 16c.55 0 1 .45 1 1v2c0 .55-.45 1-1 1s-1-.45-1-1v-2c0-.55.45-1 1-1zm9-5c.55 0 1 .45 1 1s-.45 1-1 1h-2c-.55 0-1-.45-1-1s.45-1 1-1h2zM5 12c0-.55-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1z" opacity="0.3"/>
                       </svg>
-                      <h2 className="text-sm font-semibold text-white">Tokens</h2>
+                      <h2 className="text-sm font-semibold text-white font-manrope">Tokens</h2>
                     </div>
                     <button className="p-1 hover:bg-gray-800 rounded">
                       <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,22 +329,22 @@ function SpectralAgentContent() {
                   </div>
                   <div className="space-y-2">
                     {loading ? (
-                      <div className="bg-gray-800 rounded-lg p-3 border border-teal-900/50">
-                        <p className="text-xs text-gray-400">Loading tokens...</p>
+                      <div className="transparent-container rounded-lg p-3 border border-purple-500/20">
+                        <p className="text-xs text-gray-200 font-manrope">Loading tokens...</p>
                       </div>
                     ) : tokens.length === 0 ? (
-                      <div className="bg-gray-800 rounded-lg p-3 border border-teal-900/50">
-                        <p className="text-xs text-gray-400">No tokens found</p>
+                      <div className="transparent-container rounded-lg p-3 border border-purple-500/20">
+                        <p className="text-xs text-gray-200 font-manrope">No tokens found</p>
                       </div>
                     ) : (
                       tokens.slice(0, 5).map((token, index) => (
-                        <div key={token.mint} className="bg-gray-800 rounded-lg p-3 border border-teal-900/50">
+                        <div key={token.mint} className="transparent-container rounded-lg p-3 border border-purple-500/20">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-semibold text-white">
+                              <p className="text-sm font-semibold text-white font-manrope">
                                 {token.mint.slice(0, 4)}...{token.mint.slice(-4)}
                               </p>
-                              <p className="text-xs text-gray-400">
+                              <p className="text-xs text-gray-200 font-manrope">
                                 {token.uiAmount.toLocaleString()}
                               </p>
                             </div>
@@ -168,50 +357,49 @@ function SpectralAgentContent() {
               </div>
 
               {/* Wallet Connection at Bottom */}
-              <div className="mt-auto pt-4 border-t border-teal-900/50">
+              <div className="mt-auto pt-4 border-t border-purple-500/30">
                 <WalletButton />
               </div>
             </aside>
-
             {/* Main Content */}
-            <main className="flex-1 bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-900/50 p-6 overflow-y-auto">
+            <main className="flex-1 transparent-container rounded-xl p-6 overflow-y-auto">
               <div className="space-y-4">
                 {isProcessingPayment && (
-                  <div className="bg-teal-900/30 border border-teal-500/50 rounded-lg p-4 mb-4">
+                  <div className="transparent-container border border-pink-500/30 rounded-lg p-4 mb-4">
                     <div className="flex items-center gap-3">
-                      <svg className="w-5 h-5 text-teal-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-pink-400 animate-spin" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <p className="text-sm text-teal-400 font-medium">Processing x402 payment...</p>
+                      <p className="text-sm text-pink-400 font-medium font-manrope">Processing x402 payment...</p>
                     </div>
                   </div>
                 )}
 
                 {aiResponse ? (
-                  <div className="pb-4 border-b border-teal-900/50">
-                    <h3 className="font-semibold text-white mb-3">AI Response:</h3>
-                    <div className="bg-gray-800 rounded-lg p-4">
-                      <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{aiResponse}</p>
+                  <div className="pb-4 border-b border-purple-500/20">
+                    <h3 className="font-semibold text-white mb-3 font-manrope">AI Response:</h3>
+                    <div className="transparent-container rounded-lg p-4">
+                      <p className="text-white leading-relaxed whitespace-pre-wrap font-manrope">{aiResponse}</p>
                     </div>
                   </div>
                 ) : (
                   <>
                     {/* Transaction History */}
-                    <div className="pb-4 border-b border-teal-900/50">
-                      <h3 className="font-semibold text-white mb-3">Transaction History:</h3>
-                      <p className="text-gray-300 leading-relaxed">
+                    <div className="pb-4 border-b border-purple-500/20">
+                      <h3 className="font-semibold text-white mb-3 font-manrope">Transaction History:</h3>
+                      <p className="text-white leading-relaxed font-manrope">
                         There have been 6,410 buys and 2,766 sells of EKpQGSJrJMFqK29KQanSqYXRcFBfBopzLHYwdM65zqm in the last 24 hours.
                       </p>
                     </div>
 
                     {/* Price Prediction */}
                     <div>
-                      <h3 className="font-semibold text-white mb-3">Price Prediction:</h3>
-                      <p className="text-gray-300 leading-relaxed mb-4">
+                      <h3 className="font-semibold text-white mb-3 font-manrope">Price Prediction:</h3>
+                      <p className="text-white leading-relaxed mb-4 font-manrope">
                         The token's price has been relatively stable with a high confidence level in the quoted prices.
                       </p>
-                      <p className="text-gray-300 leading-relaxed">
+                      <p className="text-white leading-relaxed font-manrope">
                         In conclusion, considering the positive price changes, liquidity, market capitalization, and active trading volume, buying EKpQGSJrJMFqK29KQanSqYXRcFBfBopzLHYwdM65zqm could be a good option. However, as with any investment, it is important to conduct further research, analyze market trends, and consider your risk tolerance before making a decision.
                       </p>
                     </div>
@@ -220,92 +408,178 @@ function SpectralAgentContent() {
               </div>
             </main>
           </div>
-
-            {/* Bottom Chat Interface */}
-            <div className="bg-gray-900/95 backdrop-blur-sm rounded-b-2xl border border-t-0 border-teal-900/50 p-4 shadow-lg">
+          {/* Bottom Chat Interface */}
+          <div className="chatbox-clean rounded-2xl border border-purple-500/20 p-4">
               <div className="flex items-end gap-4">
                 {/* Chat Interface */}
                 <div className="flex-1">
                   {/* Tabs */}
                   <div className="flex flex-wrap gap-2 mb-3">
                     <button
-                      onClick={() => setActiveTab("claude-opus-4.1")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handleTabClick("claude-opus-4.1")}
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
                         activeTab === "claude-opus-4.1"
-                          ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-black"
-                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                      }`}
+                          ? "text-white border border-purple-500/50"
+                          : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
+                      } ${clickedTab === "claude-opus-4.1" ? "ai-tab-click" : ""}`}
+                      style={activeTab === "claude-opus-4.1" ? {
+                        background: 'rgba(168, 85, 247, 0.25)',
+                        backdropFilter: 'blur(20px)',
+                      } : {}}
                     >
                       🧠 Claude Opus 4.1
                     </button>
                     <button
-                      onClick={() => setActiveTab("gpt-4-32k")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handleTabClick("gpt-4-32k")}
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
                         activeTab === "gpt-4-32k"
-                          ? "bg-gray-800 text-white"
-                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                      }`}
+                          ? "text-white border border-purple-500/50"
+                          : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
+                      } ${clickedTab === "gpt-4-32k" ? "ai-tab-click" : ""}`}
+                      style={activeTab === "gpt-4-32k" ? {
+                        background: 'rgba(168, 85, 247, 0.25)',
+                        backdropFilter: 'blur(20px)',
+                      } : {}}
                     >
-                      ⚡ GPT-4 32K
+                      ⚡️ GPT-4 32K
                     </button>
                     <button
-                      onClick={() => setActiveTab("gpt-4.5")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handleTabClick("gpt-4.5")}
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
                         activeTab === "gpt-4.5"
-                          ? "bg-gray-800 text-white"
-                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                      }`}
+                          ? "text-white border border-purple-500/50"
+                          : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
+                      } ${clickedTab === "gpt-4.5" ? "ai-tab-click" : ""}`}
+                      style={activeTab === "gpt-4.5" ? {
+                        background: 'rgba(168, 85, 247, 0.25)',
+                        backdropFilter: 'blur(20px)',
+                      } : {}}
                     >
                       🚀 GPT-4.5
                     </button>
                     <button
-                      onClick={() => setActiveTab("o1-pro")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handleTabClick("o1-pro")}
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
                         activeTab === "o1-pro"
-                          ? "bg-gray-800 text-white"
-                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                      }`}
+                          ? "text-white border border-purple-500/50"
+                          : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
+                      } ${clickedTab === "o1-pro" ? "ai-tab-click" : ""}`}
+                      style={activeTab === "o1-pro" ? {
+                        background: 'rgba(168, 85, 247, 0.25)',
+                        backdropFilter: 'blur(20px)',
+                      } : {}}
                     >
                       🎯 o1-pro
                     </button>
                     <button
-                      onClick={() => setActiveTab("gemini-2.5-pro")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handleTabClick("gemini-2.5-pro")}
+                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 ${
                         activeTab === "gemini-2.5-pro"
-                          ? "bg-gray-800 text-white"
-                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-                      }`}
+                          ? "text-white border border-purple-500/50"
+                          : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
+                      } ${clickedTab === "gemini-2.5-pro" ? "ai-tab-click" : ""}`}
+                      style={activeTab === "gemini-2.5-pro" ? {
+                        background: 'rgba(168, 85, 247, 0.25)',
+                        backdropFilter: 'blur(20px)',
+                      } : {}}
                     >
                       💎 Gemini 2.5 Pro
                     </button>
-                  </div>
-
-                  {/* Input */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder={`Type your message for ${activeTab}...`}
-                      className="flex-1 px-4 py-3 bg-gray-800 border border-teal-900/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-gray-500"
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={!message || isLoadingAI || isProcessingPayment}
-                      className="px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-black rounded-lg hover:from-teal-400 hover:to-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoadingAI || isProcessingPayment ? (
-                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </div>
+                    {/* Input - Fullscreen word-doc style when typing */}
+                  {isTyping ? (
+                    <div className="fixed inset-0 flex items-center justify-center p-8 bg-black/50 z-50">
+                      <div className="w-full max-w-4xl">
+                        <input
+                          type="text"
+                          value={message}
+                          onChange={handleMessageChange}
+                          placeholder="Start typing..."
+                          className="w-full px-8 py-8 text-xl rounded-2xl shadow-2xl font-manrope focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-white placeholder-gray-400"
+                          style={{
+                            background: 'rgba(0, 0, 0, 0.6)',
+                            backdropFilter: 'blur(24px)',
+                            border: '1px solid rgba(236, 72, 153, 0.5)',
+                            boxShadow: '0 0 60px rgba(168, 85, 247, 0.4), 0 0 120px rgba(236, 72, 153, 0.3), inset 0 0 40px rgba(168, 85, 247, 0.1)'
+                          }}
+                          autoFocus
+                        />
+                      </div>
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!message || isLoadingAI || isProcessingPayment}
+                        className="fixed bottom-8 right-8 px-6 py-4 rounded-xl font-manrope transition-all duration-500 disabled:cursor-not-allowed flex items-center justify-center"
+                        style={{
+                          background: !message || isLoadingAI || isProcessingPayment 
+                            ? 'rgba(255, 255, 255, 0.1)' 
+                            : 'rgba(16, 185, 129, 0.2)',
+                          backdropFilter: 'blur(16px)',
+                          border: !message || isLoadingAI || isProcessingPayment
+                            ? '1px solid rgba(255, 255, 255, 0.2)'
+                            : '1px solid rgba(16, 185, 129, 0.4)',
+                          color: !message || isLoadingAI || isProcessingPayment
+                            ? 'rgba(255, 255, 255, 0.4)'
+                            : 'rgba(255, 255, 255, 0.95)',
+                          boxShadow: '0 0 30px rgba(16, 185, 129, 0.3)'
+                        }}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                         </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={message}
+                        onChange={handleMessageChange}
+                        placeholder={`Type your message for ${activeTab}...`}
+                        className="flex-1 px-6 py-4 chatbox-clean border border-purple-500/20 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/40 text-white placeholder-gray-400 font-manrope"
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!message || isLoadingAI || isProcessingPayment}
+                        className="px-5 py-4 rounded-lg font-manrope transition-all duration-500 disabled:cursor-not-allowed flex items-center justify-center"
+                        style={{
+                          background: !message || isLoadingAI || isProcessingPayment 
+                            ? 'rgba(255, 255, 255, 0.03)' 
+                            : 'rgba(255, 255, 255, 0.06)',
+                          backdropFilter: 'blur(12px)',
+                          border: !message || isLoadingAI || isProcessingPayment
+                            ? '1px solid rgba(255, 255, 255, 0.08)'
+                            : '1px solid rgba(255, 255, 255, 0.15)',
+                          color: !message || isLoadingAI || isProcessingPayment
+                            ? 'rgba(255, 255, 255, 0.3)'
+                            : 'rgba(255, 255, 255, 0.9)',
+                          minWidth: '48px'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!message || isLoadingAI || isProcessingPayment) return;
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+                          e.currentTarget.style.transform = 'scale(1.02)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!message || isLoadingAI || isProcessingPayment) return;
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        {isLoadingAI || isProcessingPayment ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" strokeWidth="2"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -314,8 +588,8 @@ function SpectralAgentContent() {
           {/* Right Sidebar - Outside Main Window */}
           <aside className="w-80 flex flex-col gap-4">
             {/* Suggestions */}
-            <div className="bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-900/50 p-5">
-              <h2 className="font-semibold text-white mb-4">Suggestions</h2>
+            <div className="transparent-container rounded-xl p-5">
+              <h2 className="font-semibold text-white mb-4 font-manrope">Suggestions</h2>
               <div className="space-y-2">
                 {[
                   "Ask about market analysis and trends",
@@ -329,29 +603,28 @@ function SpectralAgentContent() {
                 ].map((suggestion, index) => (
                   <button
                     key={index}
-                    className="w-full text-left text-sm text-gray-400 hover:text-teal-400 hover:bg-teal-900/20 px-3 py-2 rounded-lg transition-colors"
+                    className="w-full text-left text-sm text-white hover:text-pink-400 px-3 py-2 rounded-lg transition-colors font-manrope"
                   >
                     · {suggestion}
                   </button>
                 ))}
               </div>
             </div>
-
             {/* Integrations */}
-            <div className="bg-gray-900/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-900/50 p-5">
+            <div className="transparent-container rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-5 h-5 bg-teal-900/50 rounded-full flex items-center justify-center">
-                  <svg className="w-3 h-3 text-teal-400" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-5 h-5 bg-purple-500/30 rounded-full flex items-center justify-center">
+                  <svg className="w-3 h-3 text-purple-300" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M13 7H7v6h6V7z" />
                     <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <h2 className="font-semibold text-white">Integrations</h2>
+                <h2 className="font-semibold text-white font-manrope">Integrations</h2>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { name: "Solana", color: "purple", icon: "🟣" },
-                  { name: "Brave", color: "orange", icon: "🦁" },
+                  { name: "Brave", color: "orange", icon: "brave-logo", isLogo: true },
                   { name: "DeepSeek", color: "blue", icon: "🔍" },
                   { name: "Jupiter", color: "teal", icon: "🪐" },
                   { name: "Pumpfun", color: "green", icon: "🎈" },
@@ -359,16 +632,22 @@ function SpectralAgentContent() {
                 ].map((integration) => (
                   <button
                     key={integration.name}
-                    className="bg-gray-800 hover:bg-gray-800/80 border border-teal-900/50 rounded-lg p-3 transition-colors flex items-center gap-2"
+                    className="transparent-container hover:bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 transition-colors flex items-center gap-2"
                   >
-                    <span className="text-xl">{integration.icon}</span>
-                    <span className="text-sm font-medium text-gray-300">{integration.name}</span>
+                    {integration.isLogo && integration.icon === "brave-logo" ? (
+                      <img src="/brave-logo.svg" alt="Brave" className="w-5 h-5" />
+                    ) : (
+                      <span className="text-xl">{integration.icon}</span>
+                    )}
+                    <span className="text-sm font-medium text-white font-manrope">{integration.name}</span>
                   </button>
                 ))}
               </div>
             </div>
           </aside>
-        </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -381,4 +660,3 @@ export default function SpectralAgent() {
     </WalletContextProvider>
   );
 }
-

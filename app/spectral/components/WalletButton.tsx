@@ -19,7 +19,23 @@ export default function WalletButton() {
     return (
       <button
         onClick={() => setVisible(true)}
-        className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg"
+        className="w-full px-6 py-3 rounded-lg font-manrope font-medium transition-all flex items-center justify-center"
+        style={{
+          background: 'rgba(16, 185, 129, 0.08)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(16, 185, 129, 0.2)',
+          color: 'rgba(255, 255, 255, 0.9)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(16, 185, 129, 0.12)';
+          e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+          e.currentTarget.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(16, 185, 129, 0.08)';
+          e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
       >
         Connect Wallet
       </button>
@@ -30,7 +46,23 @@ export default function WalletButton() {
     return (
       <button
         onClick={() => setVisible(true)}
-        className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg"
+        className="w-full px-6 py-3 rounded-lg font-manrope font-medium transition-all flex items-center justify-center"
+        style={{
+          background: 'rgba(16, 185, 129, 0.08)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(16, 185, 129, 0.2)',
+          color: 'rgba(255, 255, 255, 0.9)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(16, 185, 129, 0.12)';
+          e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+          e.currentTarget.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(16, 185, 129, 0.08)';
+          e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
       >
         Connect Wallet
       </button>
@@ -40,25 +72,23 @@ export default function WalletButton() {
   return (
     <button
       onClick={disconnect}
-      className="bg-gray-800 hover:bg-gray-800/80 border border-teal-900/50 rounded-lg px-4 py-3 shadow-sm transition-colors w-full group"
+      className="w-full transparent-container hover:bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-3 shadow-sm transition-all group flex items-center justify-center gap-3"
       title="Click to disconnect"
     >
-      <div className="flex items-center gap-3">
-        {wallet.adapter.icon ? (
-          <img
-            src={wallet.adapter.icon}
-            alt={wallet.adapter.name}
-            width={24}
-            height={24}
-            className="rounded w-6 h-6"
-          />
-        ) : (
-          <div className="w-6 h-6 bg-gradient-to-br from-teal-500 to-emerald-500 rounded"></div>
-        )}
-        <span className="text-sm font-mono font-semibold text-white group-hover:text-teal-400">
-          {shortAddress}
-        </span>
-      </div>
+      {wallet.adapter.icon ? (
+        <img
+          src={wallet.adapter.icon}
+          alt={wallet.adapter.name}
+          width={20}
+          height={20}
+          className="rounded w-5 h-5"
+        />
+      ) : (
+        <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-pink-500 rounded-full"></div>
+      )}
+      <span className="text-sm font-manrope font-semibold text-white group-hover:text-pink-400">
+        {shortAddress}
+      </span>
     </button>
   );
 }

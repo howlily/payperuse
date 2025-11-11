@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
+import BreathingLights from "./components/BreathingLights";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${manrope.variable} antialiased`} style={{ fontFamily: 'var(--font-manrope)' }}>
+        <BreathingLights />
         {children}
       </body>
     </html>

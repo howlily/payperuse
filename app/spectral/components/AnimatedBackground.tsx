@@ -125,7 +125,6 @@ export default function AnimatedBackground() {
         particles.push(new Particle(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 40));
       }
     }
-
     // Animation loop
     let animationId: number;
     const animate = () => {
@@ -160,4 +159,3 @@ export default function AnimatedBackground() {
     />
   );
 }
-
