@@ -11,7 +11,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Spectral - Solana AI Assistant",
+  title: "Spectral - AI Partner Powered by x402",
   description: "AI-powered Solana blockchain assistant with wallet integration",
   icons: {
     icon: "/integrations/spectral logo.png",

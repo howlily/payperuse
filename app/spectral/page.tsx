@@ -43,7 +43,7 @@ function SpectralAgentContent() {
   };
 
   const handleCAClick = async () => {
-    const address = "3wfYscRpEGAkoGCxgyaXTDb0byPZCXxXheLxeX2ypuep";
+    const address = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
     try {
       await navigator.clipboard.writeText(address);
       setCaCopied(true);
@@ -211,7 +211,7 @@ function SpectralAgentContent() {
         onClick={handleCAClick}
       >
         <span className="text-xs font-medium text-white/80 font-manrope tracking-wider">
-          {caCopied ? 'Copied!' : '3wfYscRpEGAkoGCxgyaXTDb0byPZCXxXheLxeX2ypuep'}
+          {caCopied ? 'Copied!' : 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'}
         </span>
       </div>
 
