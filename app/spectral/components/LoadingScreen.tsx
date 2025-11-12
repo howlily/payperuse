@@ -28,16 +28,13 @@ export default function LoadingScreen() {
     >
       {/* Loading Content - Centered */}
       <div className="text-center">
-        <div className="flex items-center gap-3 justify-center mb-6">
-          <div className="w-6 h-6 bg-purple-400 rounded-full animate-bounce"></div>
-          <div
-            className="w-6 h-6 bg-pink-400 rounded-full animate-bounce"
-            style={{ animationDelay: "0.2s" }}
-          ></div>
-          <div
-            className="w-6 h-6 bg-purple-400 rounded-full animate-bounce"
-            style={{ animationDelay: "0.4s" }}
-          ></div>
+        <div className="flex items-center justify-center mb-6">
+          <img 
+            src="/integrations/spectral logo.png" 
+            alt="Spectral Logo" 
+            className="w-24 h-24 animate-spin"
+            style={{ animationDuration: '2s' }}
+          />
         </div>
         <p className="text-white/60 font-manrope text-sm">Loading...</p>
       </div>

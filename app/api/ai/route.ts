@@ -28,29 +28,23 @@ const MODEL_PRICING: Record<string, { input: number; output: number; provider: s
     input: 15.0, // $15 per 1M input tokens
     output: 75.0, // $75 per 1M output tokens
   },
-  "gpt-4-32k": {
+  "gpt-5": {
     provider: "openai",
-    model: "gpt-4-32k", // Note: This model may be deprecated, using gpt-4-turbo as fallback
-    input: 60.0, // $60 per 1M input tokens
-    output: 120.0, // $120 per 1M output tokens
+    model: "gpt-4o", // Using GPT-4o as GPT-5 doesn't exist yet
+    input: 4.5, // $4.5 per 1M input tokens
+    output: 6.75, // $6.75 per 1M output tokens
   },
-  "gpt-4.5": {
+  "o4-mini": {
     provider: "openai",
-    model: "gpt-4o", // Using GPT-4o as GPT-4.5 doesn't exist yet
-    input: 5.0, // $5 per 1M input tokens
-    output: 15.0, // $15 per 1M output tokens
+    model: "o1-preview", // Using o1-preview as o4-mini doesn't exist yet
+    input: 2.2, // $2.2 per 1M input tokens
+    output: 3.3, // $3.3 per 1M output tokens
   },
-  "o1-pro": {
-    provider: "openai",
-    model: "o1-preview", // Using o1-preview
-    input: 15.0, // $15 per 1M input tokens
-    output: 60.0, // $60 per 1M output tokens (o1 models have higher output costs)
-  },
-  "gemini-2.5-pro": {
+  "gemini-2.5-flash": {
     provider: "google",
-    model: "gemini-2.0-flash-exp", // Using available model
+    model: "gemini-2.5-flash", // Using Gemini 2.5 Flash (free tier)
     input: 0.0, // Free tier
-    output: 0.0, // Free tier (update with actual pricing)
+    output: 0.0, // Free tier
   },
 };
 
@@ -99,8 +93,8 @@ async function callOpenAI(model: string, message: string): Promise<LLMResponse> 
     throw new Error("OpenAI API key not configured");
   }
 
-  // Handle o1 models which use different parameters
-  const isO1Model = model.startsWith("o1");
+  // Handle o1/o4 models which use different parameters
+  const isO1Model = model.startsWith("o1") || model.startsWith("o4");
   const requestBody: any = {
     model,
     messages: [
@@ -180,38 +174,72 @@ async function callGoogle(model: string, message: string): Promise<LLMResponse> 
     throw new Error("Google API key not configured");
   }
 
-  const response = await fetch(
-    `${LLM_CONFIG.google.baseURL}/models/${model}:generateContent?key=${LLM_CONFIG.google.apiKey}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
+  console.log(`[Google API] Calling model: ${model}`);
+  console.log(`[Google API] Message length: ${message.length} characters`);
+
+  // Use the newer Gemini API format
+  const apiUrl = `${LLM_CONFIG.google.baseURL}/models/${model}:generateContent?key=${LLM_CONFIG.google.apiKey}`;
+  console.log(`[Google API] URL: ${apiUrl.replace(LLM_CONFIG.google.apiKey, "***")}`);
+  
+  const requestBody = {
+    contents: [
+      {
+        parts: [
           {
-            parts: [
-              {
-                text: message,
-              },
-            ],
+            text: message,
           },
         ],
-        generationConfig: {
-          maxOutputTokens: 2000,
-          temperature: 0.7,
-        },
-      }),
-    }
-  );
+      },
+    ],
+    generationConfig: {
+      maxOutputTokens: 2000,
+      temperature: 0.7,
+    },
+  };
+
+  console.log(`[Google API] Request body:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Google API error: ${response.status} - ${error}`);
+    const errorText = await response.text();
+    let errorMessage = `Google API error: ${response.status}`;
+    try {
+      const errorData = JSON.parse(errorText);
+      errorMessage += ` - ${errorData.error?.message || errorText}`;
+    } catch {
+      errorMessage += ` - ${errorText}`;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated";
+  console.log("[Google API] Response data:", JSON.stringify(data, null, 2));
+  
+  // Check if there are any candidates
+  if (!data.candidates || data.candidates.length === 0) {
+    console.error("[Google API] No candidates in response:", data);
+    throw new Error("No response candidates from Google API");
+  }
+
+  // Check for finish reason (might indicate blocking)
+  const finishReason = data.candidates[0]?.finishReason;
+  if (finishReason && finishReason !== "STOP") {
+    console.warn(`[Google API] Finish reason: ${finishReason}`);
+  }
+
+  const content = data.candidates[0]?.content?.parts?.[0]?.text || "No response generated";
+  
+  if (content === "No response generated") {
+    console.error("[Google API] No text content in response:", data);
+    throw new Error("No text content in Google API response");
+  }
   
   return {
     content,
@@ -254,8 +282,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if this is a free model (no payment required)
+    const isFreeModel = modelConfig.input === 0 && modelConfig.output === 0;
+    
+    console.log(`[AI API] Model: ${modelKey}, IsFreeModel: ${isFreeModel}`);
+    
     // Check if payment was made by verifying with x402 endpoint
     const xPaymentHeader = request.headers.get("X-Payment");
+    
+    // Skip payment for free models
+    if (isFreeModel) {
+      console.log(`[AI API] Processing free model ${modelKey} - skipping payment`);
+      // For free models, proceed directly to LLM call
+      const providerConfig = LLM_CONFIG[modelConfig.provider as keyof typeof LLM_CONFIG];
+      if (!providerConfig?.apiKey) {
+        return NextResponse.json(
+          {
+            error: `${modelConfig.provider} API key not configured`,
+            details: `Please set ${modelConfig.provider.toUpperCase()}_API_KEY environment variable`,
+          },
+          { status: 500 }
+        );
+      }
+
+      // Call the actual LLM API
+      try {
+        const llmResponse = await callLLM(
+          modelConfig.provider,
+          modelConfig.model,
+          message
+        );
+
+        const aiResponse = {
+          response: llmResponse.content,
+          model: `${modelConfig.provider}/${modelConfig.model}`,
+          timestamp: new Date().toISOString(),
+          usage: {
+            inputTokens: llmResponse.inputTokens,
+            outputTokens: llmResponse.outputTokens,
+            totalTokens: llmResponse.inputTokens + llmResponse.outputTokens,
+          },
+          cost: {
+            estimated: 0,
+            actual: 0,
+            currency: "USDC",
+          },
+        };
+
+        return NextResponse.json({
+          success: true,
+          data: aiResponse,
+        });
+      } catch (llmError) {
+        console.error(`[AI API] Error calling LLM for free model ${modelKey}:`, llmError);
+        return NextResponse.json(
+          {
+            error: "LLM API error",
+            details: llmError instanceof Error ? llmError.message : "Unknown error",
+            model: modelKey,
+          },
+          { status: 500 }
+        );
+      }
+    }
     
     if (!xPaymentHeader) {
       // Calculate estimated cost and return 402 with payment requirements

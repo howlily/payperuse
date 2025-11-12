@@ -1,7 +1,7 @@
 "use client";
 
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
@@ -14,30 +14,37 @@ interface TokenAccount {
 
 export function useWalletBalance() {
   const { connection } = useConnection();
-  const { publicKey } = useWallet();
+  const { publicKey, connected } = useWallet();
   const [balance, setBalance] = useState<number>(0);
   const [tokens, setTokens] = useState<TokenAccount[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!publicKey) {
+  const fetchBalance = useCallback(async (retryCount = 0) => {
+    if (!publicKey || !connected) {
       setBalance(0);
       setTokens([]);
       return;
     }
 
-    const fetchBalance = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch SOL balance
-        const solBalance = await connection.getBalance(publicKey);
-        setBalance(solBalance / 1e9); // Convert lamports to SOL
+    try {
+      setLoading(true);
+      
+      console.log("Fetching balance for:", publicKey.toBase58());
+      console.log("Connection endpoint:", connection.rpcEndpoint);
+      
+      // Fetch SOL balance with confirmed commitment for faster response
+      const solBalance = await connection.getBalance(publicKey, "confirmed");
+      const solAmount = solBalance / 1e9; // Convert lamports to SOL
+      setBalance(solAmount);
+      
+      console.log("SOL Balance fetched:", solAmount, "SOL (", solBalance, "lamports)");
 
-        // Fetch token accounts
+      // Fetch token accounts
+      try {
         const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
           publicKey,
-          { programId: TOKEN_PROGRAM_ID }
+          { programId: TOKEN_PROGRAM_ID },
+          "confirmed"
         );
 
         const tokenData: TokenAccount[] = tokenAccounts.value
@@ -53,19 +60,49 @@ export function useWalletBalance() {
           .filter((token) => token.uiAmount > 0); // Only show tokens with balance
 
         setTokens(tokenData);
-      } catch (error) {
-        console.error("Error fetching wallet data:", error);
-      } finally {
-        setLoading(false);
+        console.log("Token accounts fetched:", tokenData.length);
+      } catch (tokenError) {
+        console.error("Error fetching token accounts:", tokenError);
+        setTokens([]);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching wallet balance:", error);
+      
+      // Retry up to 2 times with exponential backoff
+      if (retryCount < 2) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
+        console.log(`Retrying balance fetch in ${delay}ms...`);
+        setTimeout(() => fetchBalance(retryCount + 1), delay);
+        return;
+      }
+      
+      // Don't reset balance to 0 on error, keep previous value
+      console.error("Failed to fetch balance after retries");
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey, connection, connected]);
 
-    fetchBalance();
+  useEffect(() => {
+    if (!publicKey || !connected) {
+      setBalance(0);
+      setTokens([]);
+      return;
+    }
 
-    // Refresh every 30 seconds
+    // Small delay to ensure connection is ready after wallet connects
+    const timeoutId = setTimeout(() => {
+      fetchBalance();
+    }, 500);
+
+    // Refresh every 30 seconds as fallback
     const interval = setInterval(fetchBalance, 30000);
-    return () => clearInterval(interval);
-  }, [publicKey, connection]);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(interval);
+    };
+  }, [publicKey, connection, connected, fetchBalance]);
 
   return { balance, tokens, loading };
 }

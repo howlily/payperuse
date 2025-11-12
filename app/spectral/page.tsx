@@ -1,24 +1,42 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { WalletContextProvider } from "./components/WalletProvider";
 import WalletButton from "./components/WalletButton";
 import LoadingScreen from "./components/LoadingScreen";
 import { useWalletBalance } from "./hooks/useWalletBalance";
 import { useX402API } from "./hooks/useX402API";
+import { usePriceEstimate } from "./hooks/usePriceEstimate";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 function SpectralAgentContent() {
   const [message, setMessage] = useState("");
   const [activeTab, setActiveTab] = useState("claude-opus-4.1");
-  const [aiResponse, setAiResponse] = useState<string>("");
+  const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "assistant"; content: string; timestamp?: string }>>([]);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [clickedTab, setClickedTab] = useState<string | null>(null);
   const [caCopied, setCaCopied] = useState(false);
   const [caCentered, setCaCentered] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { balance, tokens, loading } = useWalletBalance();
   const { callAPI, isProcessing: isProcessingPayment } = useX402API();
+  const { connected, publicKey } = useWallet();
+  const priceEstimate = usePriceEstimate(message, activeTab);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll to bottom when chat history changes
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatHistory, isLoadingAI]);
+  
+  // Get USDC balance (mainnet USDC mint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v)
+  const USDC_MINT_MAINNET = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  const usdcToken = tokens.find(token => token.mint === USDC_MINT_MAINNET);
+  const usdcBalance = usdcToken?.uiAmount || 0;
+  const isFreeModel = priceEstimate.totalCostWithBuffer === 0;
+  const hasEnoughUSDC = isFreeModel || usdcBalance >= priceEstimate.totalCostWithBuffer;
 
   const handleTabClick = (tab: string) => {
     setClickedTab(tab);
@@ -39,68 +57,110 @@ function SpectralAgentContent() {
   };
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setMessage(value);
-    
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
-    // Start typing animation if there's text
-    if (value.length > 0) {
-      if (!isTyping) {
-        setIsTyping(true);
-      }
-      // Set timeout to reset after 5 seconds of no typing
-      typingTimeoutRef.current = setTimeout(() => {
-        setIsTyping(false);
-      }, 5000);
-    } else {
-      // If message is cleared, immediately reset typing state
-      setIsTyping(false);
-    }
+    setMessage(e.target.value);
   };
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
-
-    setIsTyping(false);
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
+    
+    // Check wallet connection (only required for paid models)
+    if (!isFreeModel && (!connected || !publicKey)) {
+      setChatHistory(prev => [...prev, {
+        role: "user",
+        content: message,
+        timestamp: new Date().toISOString()
+      }, {
+        role: "assistant",
+        content: "Error: Please connect your wallet first"
+      }]);
+      setMessage("");
+      return;
+    }
+    
+    // Check USDC balance (only required for paid models)
+    if (!isFreeModel && !hasEnoughUSDC) {
+      setChatHistory(prev => [...prev, {
+        role: "user",
+        content: message,
+        timestamp: new Date().toISOString()
+      }, {
+        role: "assistant",
+        content: `Error: Insufficient USDC balance. You have ${usdcBalance.toFixed(4)} USDC, but need ${priceEstimate.totalCostWithBuffer.toFixed(4)} USDC`
+      }]);
+      setMessage("");
+      return;
     }
 
+    const userMessage = message.trim();
+    // Add user message to chat
+    setChatHistory(prev => [...prev, {
+      role: "user",
+      content: userMessage,
+      timestamp: new Date().toISOString()
+    }]);
+    
+    // Clear input
+    setMessage("");
     setIsLoadingAI(true);
-    setAiResponse("");
 
     try {
       const result = await callAPI("/api/ai", {
         method: "POST",
         body: JSON.stringify({
-          message,
+          message: userMessage,
           model: activeTab,
         }),
       });
 
       if (result.error) {
-        setAiResponse(`Error: ${result.error}`);
+        setChatHistory(prev => [...prev, {
+          role: "assistant",
+          content: `Error: ${result.error}`,
+          timestamp: new Date().toISOString()
+        }]);
       } else if (result.data) {
-        setAiResponse(result.data.response || JSON.stringify(result.data, null, 2));
+        // Handle both direct data and nested data.data structure
+        const data = result.data.data || result.data;
+        const responseText = data.response || data.content || "";
+        const usage = data.usage;
+        const cost = data.cost;
+        
+        console.log("[Frontend] API Response:", { result, data, responseText });
+        
+        // Format response with usage and cost info
+        let formattedResponse = responseText;
+        if (usage || cost) {
+          formattedResponse += "\n\n---\n";
+          if (usage) {
+            formattedResponse += `\n📊 Tokens Used:\n`;
+            formattedResponse += `  Input: ${usage.inputTokens.toLocaleString()} tokens\n`;
+            formattedResponse += `  Output: ${usage.outputTokens.toLocaleString()} tokens\n`;
+            formattedResponse += `  Total: ${usage.totalTokens.toLocaleString()} tokens\n`;
+          }
+          if (cost && cost.actual > 0) {
+            formattedResponse += `\n💰 Cost:\n`;
+            formattedResponse += `  Estimated: $${cost.estimated.toFixed(4)} ${cost.currency}\n`;
+            formattedResponse += `  Actual: $${cost.actual.toFixed(4)} ${cost.currency}\n`;
+          }
+        }
+        
+        setChatHistory(prev => [...prev, {
+          role: "assistant",
+          content: formattedResponse,
+          timestamp: new Date().toISOString()
+        }]);
       }
     } catch (error) {
-      setAiResponse(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setChatHistory(prev => [...prev, {
+        role: "assistant",
+        content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        timestamp: new Date().toISOString()
+      }]);
     } finally {
       setIsLoadingAI(false);
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const [splineLoaded, setSplineLoaded] = useState(false);
 
@@ -144,6 +204,27 @@ function SpectralAgentContent() {
         </>
       )}
       
+      {/* Header Navigation */}
+      <header className="fixed top-0 left-0 right-0 bg-transparent backdrop-blur-sm px-6 py-6 z-50">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <img 
+              src="/integrations/spectral logo.png" 
+              alt="Spectral Logo" 
+              className="h-8 w-8 object-contain"
+            />
+          </Link>
+          <nav className="flex items-center gap-6">
+            <a href="https://github.com/howlily/spectral402" target="_blank" rel="noopener noreferrer" className="text-white/90 hover:text-purple-400 transition-colors font-manrope">
+              GitHub
+            </a>
+            <Link href="/docs" className="text-white/90 hover:text-purple-400 transition-colors font-manrope">
+              Documentation
+            </Link>
+          </nav>
+        </div>
+      </header>
+      
       {/* CA Badge */}
       <div 
         className={`floating-ca ${caCentered ? 'ca-centered' : ''}`}
@@ -156,110 +237,113 @@ function SpectralAgentContent() {
 
       {/* Scrollable Content */}
       <div className="relative z-10">
-        {/* Pricing Section - Smaller, positioned above chat */}
-        <section className="flex items-end justify-center px-6 pt-32 pb-8">
-          <div className="max-w-5xl mx-auto w-full">
+        {/* Pricing Section - Model pricing */}
+        <section className="flex items-center justify-center px-6 pt-20 pb-10">
+          <div className="max-w-7xl mx-auto w-full">
             <h2 className="text-3xl font-medium text-white text-center mb-8 font-manrope">Pricing</h2>
-            <div className="grid md:grid-cols-3 gap-4">
-              {/* Free Plan */}
+            <div className="grid grid-cols-4 gap-3">
+              {/* Claude Opus 4.1 */}
               <div 
-                className="transparent-container rounded-xl p-5 transition-all duration-300"
+                className="transparent-container rounded-xl p-4 transition-all duration-300 relative"
                 style={{
                   background: 'rgba(168, 85, 247, 0.04)',
                   backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(236, 72, 153, 0.1)'
+                  border: '1px solid rgba(236, 72, 153, 0.1)',
+                  boxShadow: '0 0 30px rgba(99, 102, 241, 0.3), 0 0 60px rgba(79, 70, 229, 0.2)'
                 }}
               >
-                <h3 className="text-lg font-semibold text-white mb-1 font-manrope">Free</h3>
-                <div className="text-2xl font-bold text-white mb-3 font-manrope">$0<span className="text-sm text-white/60">/month</span></div>
-                <ul className="space-y-2 mb-6">
-                  <li className="text-white/80 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> 10 API calls/day
-                  </li>
-                  <li className="text-white/80 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> Basic AI models
-                  </li>
-                  <li className="text-white/80 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> Community support
-                  </li>
-                </ul>
-                <button
-                  onClick={scrollToChat}
-                  className="w-full px-4 py-2 transparent-container border border-emerald-500/30 rounded-lg text-white text-sm font-manrope font-medium hover:border-emerald-500/50 transition-all"
-                >
-                  Get Started
-                </button>
-              </div>
-              {/* Basic Plan - Coming Soon */}
-              <div 
-                className="transparent-container rounded-xl p-5 opacity-50"
-                style={{
-                  background: 'rgba(168, 85, 247, 0.02)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(236, 72, 153, 0.05)'
-                }}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-lg font-semibold text-white/60 font-manrope">Basic</h3>
-                  <span className="text-xs text-white/40 bg-white/5 px-2 py-0.5 rounded font-manrope">Coming Soon</span>
+                <img src="/integrations/claudelogo.png" alt="Claude" className="absolute top-3 right-3 w-6 h-6 object-contain opacity-80" />
+                <h3 className="text-2xl font-semibold text-white mb-2 font-manrope">Claude Opus 4.1</h3>
+                <div className="text-xl font-bold text-white mb-1 font-manrope">$45</div>
+                <p className="text-white/70 text-xs font-manrope mb-1 leading-tight">per 1M tokens</p>
+                <p className="text-white/60 text-xs font-manrope mb-2 leading-tight">$0.000045 per token</p>
+                <div className="border-t border-white/10 pt-2 mb-2">
+                  <p className="text-white/80 text-xs font-manrope leading-tight mb-1"><span className="font-semibold">Best for:</span> Long-form writing, analysis, reasoning, and complex problem-solving</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight mt-1">• Extended context window for comprehensive analysis</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">• Superior writing quality and coherence</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">• Advanced reasoning capabilities</p>
                 </div>
-                <div className="text-2xl font-bold text-white/60 mb-3 font-manrope">$29<span className="text-sm text-white/40">/month</span></div>
-                <ul className="space-y-2 mb-6">
-                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> 1,000 API calls/month
-                  </li>
-                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> All AI models
-                  </li>
-                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> Priority support
-                  </li>
-                </ul>
-                <button 
-                  disabled
-                  className="w-full px-4 py-2 transparent-container border border-white/10 rounded-lg text-white/40 text-sm font-manrope font-medium cursor-not-allowed"
-                >
-                  Coming Soon
-                </button>
               </div>
 
-              {/* Pro Plan - Coming Soon */}
+              {/* GPT-5 */}
               <div 
-                className="transparent-container rounded-xl p-5 opacity-50"
+                className="transparent-container rounded-xl p-4 transition-all duration-300 relative"
                 style={{
-                  background: 'rgba(168, 85, 247, 0.02)',
+                  background: 'rgba(168, 85, 247, 0.04)',
                   backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(236, 72, 153, 0.05)'
+                  border: '1px solid rgba(236, 72, 153, 0.1)',
+                  boxShadow: '0 0 30px rgba(99, 102, 241, 0.3), 0 0 60px rgba(79, 70, 229, 0.2)'
                 }}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-lg font-semibold text-white/60 font-manrope">Pro</h3>
-                  <span className="text-xs text-white/40 bg-white/5 px-2 py-0.5 rounded font-manrope">Coming Soon</span>
+                <img src="/integrations/openailogo.png" alt="OpenAI" className="absolute top-3 right-3 w-6 h-6 object-contain opacity-80" />
+                <h3 className="text-2xl font-semibold text-white mb-2 font-manrope">GPT-5</h3>
+                <div className="text-xl font-bold text-white mb-1 font-manrope">$11.25</div>
+                <p className="text-white/70 text-xs font-manrope mb-1 leading-tight">per 1M tokens</p>
+                <p className="text-white/60 text-xs font-manrope mb-2 leading-tight">$0.00001125 per token</p>
+                <div className="border-t border-white/10 pt-2 mb-2">
+                  <p className="text-white/80 text-xs font-manrope leading-tight mb-1"><span className="font-semibold">Best for:</span> Advanced reasoning, improved accuracy, and complex analysis</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight mt-1">• Latest GPT model with enhanced capabilities</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">• Improved accuracy and reduced hallucinations</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">• Better handling of nuanced instructions</p>
                 </div>
-                <div className="text-2xl font-bold text-white/60 mb-3 font-manrope">$99<span className="text-sm text-white/40">/month</span></div>
-                <ul className="space-y-2 mb-6">
-                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> Unlimited API calls
-                  </li>
-                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> All AI models + custom
-                  </li>
-                  <li className="text-white/50 text-sm font-manrope flex items-center gap-2">
-                    <span>✓</span> 24/7 support
-                  </li>
-                </ul>
-                <button 
-                  disabled
-                  className="w-full px-4 py-2 transparent-container border border-white/10 rounded-lg text-white/40 text-sm font-manrope font-medium cursor-not-allowed"
-                >
-                  Coming Soon
-                </button>
+              </div>
+
+              {/* o4-mini */}
+              <div 
+                className="transparent-container rounded-xl p-4 transition-all duration-300 relative"
+                style={{
+                  background: 'rgba(168, 85, 247, 0.04)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(236, 72, 153, 0.1)',
+                  boxShadow: '0 0 30px rgba(99, 102, 241, 0.3), 0 0 60px rgba(79, 70, 229, 0.2)'
+                }}
+              >
+                <img src="/integrations/openailogo.png" alt="OpenAI" className="absolute top-3 right-3 w-6 h-6 object-contain opacity-80" />
+                <h3 className="text-2xl font-semibold text-white mb-2 font-manrope">o4-mini</h3>
+                <div className="text-xl font-bold text-white mb-1 font-manrope">$5.50</div>
+                <p className="text-white/70 text-xs font-manrope mb-1 leading-tight">per 1M tokens</p>
+                <p className="text-white/60 text-xs font-manrope mb-2 leading-tight">$0.0000055 per token</p>
+                <div className="border-t border-white/10 pt-2 mb-2">
+                  <p className="text-white/80 text-xs font-manrope leading-tight mb-1"><span className="font-semibold">Best for:</span> Advanced reasoning, mathematics, logic, and complex problem-solving</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight mt-1">• State-of-the-art reasoning architecture</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">• Exceptional math and logic performance</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">• Deep problem-solving capabilities</p>
+                </div>
+              </div>
+
+              {/* Gemini 2.5 Flash */}
+              <div 
+                className="transparent-container rounded-xl p-4 transition-all duration-300 relative"
+                style={{
+                  background: 'rgba(168, 85, 247, 0.04)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(236, 72, 153, 0.1)',
+                  boxShadow: '0 0 30px rgba(99, 102, 241, 0.3), 0 0 60px rgba(79, 70, 229, 0.2)'
+                }}
+              >
+                <img src="/integrations/geminilogo.png" alt="Gemini" className="absolute top-3 right-3 w-6 h-6 object-contain opacity-80" />
+                <h3 className="text-2xl font-semibold text-white mb-2 font-manrope">Gemini 2.5 Flash</h3>
+                <div className="mb-1">
+                  <div className="text-lg font-bold text-white mb-0.5 font-manrope">$5.625</div>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">per 1M tokens</p>
+                  <p className="text-white/60 text-xs font-manrope leading-tight">(&lt; 200K tokens)</p>
+                  <p className="text-white/60 text-xs font-manrope leading-tight">$0.000005625/token</p>
+                </div>
+                <div className="mb-2">
+                  <div className="text-lg font-bold text-white mb-0.5 font-manrope">$8.75</div>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">per 1M tokens</p>
+                  <p className="text-white/60 text-xs font-manrope leading-tight">(&gt; 200K tokens)</p>
+                  <p className="text-white/60 text-xs font-manrope leading-tight">$0.00000875/token</p>
+                </div>
+                <div className="border-t border-white/10 pt-2">
+                  <p className="text-white/80 text-xs font-manrope leading-tight mb-1"><span className="font-semibold">Best for:</span> Fast responses, multimodal tasks, and cost-effective solutions</p>
+                </div>
               </div>
             </div>
           </div>
         </section>
         {/* Chat Interface Section - At Bottom */}
-        <section id="chat-section" className="min-h-screen flex items-start justify-center px-6 pt-0 pb-20 relative">
+        <section id="chat-section" className="min-h-screen flex items-start justify-center px-6 pt-10 pb-20 relative">
           <div className="w-full max-w-[1500px] mx-auto relative z-30">
             <div className="flex gap-4">
           {/* Main Windowed Container */}
@@ -364,7 +448,7 @@ function SpectralAgentContent() {
             {/* Main Content */}
             <main className="flex-1 transparent-container rounded-xl p-6 overflow-y-auto">
               <div className="space-y-4">
-                {isProcessingPayment && (
+                {isProcessingPayment && !isFreeModel && (
                   <div className="transparent-container border border-pink-500/30 rounded-lg p-4 mb-4">
                     <div className="flex items-center gap-3">
                       <svg className="w-5 h-5 text-pink-400 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -376,12 +460,63 @@ function SpectralAgentContent() {
                   </div>
                 )}
 
-                {aiResponse ? (
-                  <div className="pb-4 border-b border-purple-500/20">
-                    <h3 className="font-semibold text-white mb-3 font-manrope">AI Response:</h3>
-                    <div className="transparent-container rounded-lg p-4">
-                      <p className="text-white leading-relaxed whitespace-pre-wrap font-manrope">{aiResponse}</p>
-                    </div>
+                {chatHistory.length > 0 ? (
+                  <div className="space-y-4">
+                    {chatHistory.map((msg, index) => (
+                      <div
+                        key={index}
+                        className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg p-4 ${
+                            msg.role === "user"
+                              ? "transparent-container border border-purple-500/30"
+                              : "transparent-container border border-blue-500/30"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2 mb-1">
+                            {msg.role === "assistant" && (
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <div className="text-xs text-white/50 font-manrope mb-1">
+                                {msg.role === "user" ? "You" : "Spectral AI"}
+                              </div>
+                              <p className={`leading-relaxed whitespace-pre-wrap font-manrope ${
+                                msg.role === "user" ? "text-white" : "text-white"
+                              }`}>
+                                {msg.content}
+                              </p>
+                            </div>
+                            {msg.role === "user" && (
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/30 flex items-center justify-center flex-shrink-0 mt-0.5 ml-2">
+                                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {isLoadingAI && (
+                      <div className="flex justify-start">
+                        <div className="transparent-container border border-blue-500/30 rounded-lg p-4 max-w-[80%]">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-sm text-white/70 font-manrope">AI is thinking...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={chatEndRef} />
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center px-8 py-12">
@@ -438,148 +573,142 @@ function SpectralAgentContent() {
                       Claude Opus 4.1
                     </button>
                     <button
-                      onClick={() => handleTabClick("gpt-4-32k")}
+                      onClick={() => handleTabClick("gpt-5")}
                       className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
-                        activeTab === "gpt-4-32k"
+                        activeTab === "gpt-5"
                           ? "text-white border border-purple-500/50"
                           : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
-                      } ${clickedTab === "gpt-4-32k" ? "ai-tab-click" : ""}`}
-                      style={activeTab === "gpt-4-32k" ? {
+                      } ${clickedTab === "gpt-5" ? "ai-tab-click" : ""}`}
+                      style={activeTab === "gpt-5" ? {
                         background: 'rgba(168, 85, 247, 0.25)',
                         backdropFilter: 'blur(20px)',
                       } : {}}
                     >
                       <img src="/integrations/openailogo.png" alt="OpenAI" className="w-4 h-4 object-contain" />
-                      GPT-4 32K
+                      GPT-5
                     </button>
                     <button
-                      onClick={() => handleTabClick("gpt-4.5")}
+                      onClick={() => handleTabClick("o4-mini")}
                       className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
-                        activeTab === "gpt-4.5"
+                        activeTab === "o4-mini"
                           ? "text-white border border-purple-500/50"
                           : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
-                      } ${clickedTab === "gpt-4.5" ? "ai-tab-click" : ""}`}
-                      style={activeTab === "gpt-4.5" ? {
+                      } ${clickedTab === "o4-mini" ? "ai-tab-click" : ""}`}
+                      style={activeTab === "o4-mini" ? {
                         background: 'rgba(168, 85, 247, 0.25)',
                         backdropFilter: 'blur(20px)',
                       } : {}}
                     >
                       <img src="/integrations/openailogo.png" alt="OpenAI" className="w-4 h-4 object-contain" />
-                      GPT-4.5
+                      o4-mini
                     </button>
                     <button
-                      onClick={() => handleTabClick("o1-pro")}
+                      onClick={() => handleTabClick("gemini-2.5-flash")}
                       className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
-                        activeTab === "o1-pro"
+                        activeTab === "gemini-2.5-flash"
                           ? "text-white border border-purple-500/50"
                           : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
-                      } ${clickedTab === "o1-pro" ? "ai-tab-click" : ""}`}
-                      style={activeTab === "o1-pro" ? {
-                        background: 'rgba(168, 85, 247, 0.25)',
-                        backdropFilter: 'blur(20px)',
-                      } : {}}
-                    >
-                      <img src="/integrations/openailogo.png" alt="OpenAI" className="w-4 h-4 object-contain" />
-                      o1-pro
-                    </button>
-                    <button
-                      onClick={() => handleTabClick("gemini-2.5-pro")}
-                      className={`px-4 py-2 rounded-full text-sm font-medium font-manrope transition-all duration-300 flex items-center gap-2 ${
-                        activeTab === "gemini-2.5-pro"
-                          ? "text-white border border-purple-500/50"
-                          : "chatbox-clean text-gray-300 hover:text-white border border-purple-500/20"
-                      } ${clickedTab === "gemini-2.5-pro" ? "ai-tab-click" : ""}`}
-                      style={activeTab === "gemini-2.5-pro" ? {
+                      } ${clickedTab === "gemini-2.5-flash" ? "ai-tab-click" : ""}`}
+                      style={activeTab === "gemini-2.5-flash" ? {
                         background: 'rgba(168, 85, 247, 0.25)',
                         backdropFilter: 'blur(20px)',
                       } : {}}
                     >
                       <img src="/integrations/geminilogo.png" alt="Gemini" className="w-4 h-4 object-contain" />
-                      Gemini 2.5 Pro
+                      Gemini 2.5 Flash
                     </button>
                     </div>
-                    {/* Input - Fullscreen word-doc style when typing */}
-                  {isTyping ? (
-                    <div className="fixed inset-0 flex items-center justify-center p-8 bg-black/50 z-50">
-                      <div className="w-full max-w-4xl">
-                        <input
-                          type="text"
-                          value={message}
-                          onChange={handleMessageChange}
-                          placeholder="Start typing..."
-                          className="w-full px-8 py-8 text-xl rounded-2xl shadow-2xl font-manrope focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-white placeholder-gray-400"
-                          style={{
-                            background: 'rgba(0, 0, 0, 0.6)',
-                            backdropFilter: 'blur(24px)',
-                            border: '1px solid rgba(236, 72, 153, 0.5)',
-                            boxShadow: '0 0 60px rgba(168, 85, 247, 0.4), 0 0 120px rgba(236, 72, 153, 0.3), inset 0 0 40px rgba(168, 85, 247, 0.1)'
-                          }}
-                          autoFocus
-                        />
+                    {/* Price Estimate */}
+                    {message.trim() && (
+                      <div className="mb-3 px-2">
+                        <div className="transparent-container rounded-lg p-3 border border-purple-500/20">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-xs text-white/70 font-manrope">Estimated Cost</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isFreeModel ? (
+                                <span className="text-sm font-bold font-manrope text-green-400">
+                                  FREE
+                                </span>
+                              ) : (
+                                <>
+                                  <span className={`text-sm font-bold font-manrope ${hasEnoughUSDC ? 'text-green-400' : 'text-red-400'}`}>
+                                    ${priceEstimate.totalCostWithBuffer.toFixed(4)} USDC
+                                  </span>
+                                  {!hasEnoughUSDC && connected && (
+                                    <span className="text-xs text-red-400 font-manrope">Insufficient</span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          {!isFreeModel && (
+                            <>
+                              <div className="flex items-center justify-between text-xs text-white/60 font-manrope">
+                                <span>Input: ~{priceEstimate.inputTokens.toLocaleString()} tokens (${priceEstimate.inputCost.toFixed(4)})</span>
+                                <span>Output: ~{priceEstimate.outputTokens.toLocaleString()} tokens (${priceEstimate.outputCost.toFixed(4)})</span>
+                              </div>
+                              {connected && (
+                                <div className="mt-2 pt-2 border-t border-white/10 text-xs text-white/50 font-manrope">
+                                  USDC Balance: {usdcBalance.toFixed(4)} USDC
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {isFreeModel && (
+                            <div className="text-xs text-green-400/80 font-manrope mt-2">
+                              This model is free to use - no payment required!
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={!message || isLoadingAI || isProcessingPayment}
-                        className="fixed bottom-8 right-8 px-6 py-4 rounded-xl font-manrope transition-all duration-500 disabled:cursor-not-allowed flex items-center justify-center"
-                        style={{
-                          background: !message || isLoadingAI || isProcessingPayment 
-                            ? 'rgba(255, 255, 255, 0.1)' 
-                            : 'rgba(16, 185, 129, 0.2)',
-                          backdropFilter: 'blur(16px)',
-                          border: !message || isLoadingAI || isProcessingPayment
-                            ? '1px solid rgba(255, 255, 255, 0.2)'
-                            : '1px solid rgba(16, 185, 129, 0.4)',
-                          color: !message || isLoadingAI || isProcessingPayment
-                            ? 'rgba(255, 255, 255, 0.4)'
-                            : 'rgba(255, 255, 255, 0.95)',
-                          boxShadow: '0 0 30px rgba(16, 185, 129, 0.3)'
-                        }}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
+                    )}
+                    {/* Input */}
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={message}
                         onChange={handleMessageChange}
-                        placeholder={`Type your message for ${activeTab}...`}
+                        placeholder={isFreeModel ? `Type your message for ${activeTab}...` : (connected ? `Type your message for ${activeTab}...` : "Connect wallet to start...")}
                         className="flex-1 px-6 py-4 chatbox-clean border border-purple-500/20 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/40 text-white placeholder-gray-400 font-manrope"
+                        disabled={!isFreeModel && !connected}
                       />
                       <button
                         onClick={handleSendMessage}
-                        disabled={!message || isLoadingAI || isProcessingPayment}
+                        disabled={!message || (!isFreeModel && !connected) || isLoadingAI || (!isFreeModel && isProcessingPayment) || !hasEnoughUSDC}
                         className="px-5 py-4 rounded-lg font-manrope transition-all duration-500 disabled:cursor-not-allowed flex items-center justify-center"
                         style={{
-                          background: !message || isLoadingAI || isProcessingPayment 
+                          background: !message || (!isFreeModel && !connected) || isLoadingAI || (!isFreeModel && isProcessingPayment) || !hasEnoughUSDC
                             ? 'rgba(255, 255, 255, 0.03)' 
                             : 'rgba(255, 255, 255, 0.06)',
                           backdropFilter: 'blur(12px)',
-                          border: !message || isLoadingAI || isProcessingPayment
+                          border: !message || (!isFreeModel && !connected) || isLoadingAI || (!isFreeModel && isProcessingPayment) || !hasEnoughUSDC
                             ? '1px solid rgba(255, 255, 255, 0.08)'
                             : '1px solid rgba(255, 255, 255, 0.15)',
-                          color: !message || isLoadingAI || isProcessingPayment
+                          color: !message || (!isFreeModel && !connected) || isLoadingAI || (!isFreeModel && isProcessingPayment) || !hasEnoughUSDC
                             ? 'rgba(255, 255, 255, 0.3)'
                             : 'rgba(255, 255, 255, 0.9)',
                           minWidth: '48px'
                         }}
                         onMouseEnter={(e) => {
-                          if (!message || isLoadingAI || isProcessingPayment) return;
+                          if (!message || (!isFreeModel && !connected) || isLoadingAI || (!isFreeModel && isProcessingPayment) || !hasEnoughUSDC) return;
                           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                           e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
                           e.currentTarget.style.transform = 'scale(1.02)';
                         }}
                         onMouseLeave={(e) => {
-                          if (!message || isLoadingAI || isProcessingPayment) return;
+                          if (!message || (!isFreeModel && !connected) || isLoadingAI || (!isFreeModel && isProcessingPayment) || !hasEnoughUSDC) return;
                           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
                           e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                           e.currentTarget.style.transform = 'scale(1)';
                         }}
+                        title={isFreeModel ? "Send message (Free)" : (!connected ? "Connect wallet to send" : !hasEnoughUSDC ? `Need ${priceEstimate.totalCostWithBuffer.toFixed(4)} USDC` : "Send message")}
                       >
-                        {isLoadingAI || isProcessingPayment ? (
+                        {(isLoadingAI || (isProcessingPayment && !isFreeModel)) ? (
                           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <circle className="opacity-25" cx="12" cy="12" r="10" strokeWidth="2"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -591,7 +720,6 @@ function SpectralAgentContent() {
                         )}
                       </button>
                     </div>
-                  )}
                 </div>
               </div>
             </div>

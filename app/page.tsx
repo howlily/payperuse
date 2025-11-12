@@ -55,9 +55,12 @@ export default function Home() {
               {/* Logo removed */}
             </div>
             <nav className="flex items-center gap-6">
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-white/90 hover:text-purple-400 transition-colors">
+              <a href="https://github.com/howlily/spectral402" target="_blank" rel="noopener noreferrer" className="text-white/90 hover:text-purple-400 transition-colors">
                 GitHub
               </a>
+            <Link href="/docs" className="text-white/90 hover:text-purple-400 transition-colors">
+              Documentation
+            </Link>
             </nav>
           </div>
         </header>

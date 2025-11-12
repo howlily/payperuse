@@ -28,6 +28,9 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -91,6 +94,29 @@ storybook-static
 tmp/
 temp/
 
-# Documentation files (except README.md)
+# Documentation files (except README.md and public docs)
 *.md
 !README.md
+!public/DOCUMENTATION.md
+
+# Setup and internal documentation
+GEMINI_SETUP.md
+TESTING.md
+*SETUP*.md
+*setup*.md
+
+# Internal architecture/docs
+app/api/payment-bridge.md
+**/payment-bridge.md
+
+# Test scripts
+scripts/test-*.js
+scripts/*test*.js
+**/test-*.js
+**/*test*.js
+
+# Sensitive configuration
+*.secret
+*.key
+secrets/
+.secrets/

@@ -4,7 +4,7 @@ A modern web application that provides pay-as-you-go access to premium LLM model
 
 ## What is x402app?
 
-x402app is a decentralized AI assistant platform that lets you access premium LLM models (Claude Opus, GPT-4, o1-pro, Gemini) without monthly subscriptions or API key management. Simply connect your Solana wallet, pay with USDC via x402 protocol, and get instant access to the world's best AI models.
+x402app is a decentralized AI assistant platform that lets you access premium LLM models (Claude Opus, GPT-5, o4-mini, Gemini) without monthly subscriptions or API key management. Simply connect your Solana wallet, pay with USDC via x402 protocol, and get instant access to the world's best AI models.
 
 ## Key Features
 
@@ -18,10 +18,9 @@ x402app is a decentralized AI assistant platform that lets you access premium LL
 Access the world's most advanced AI models:
 
 - **Claude Opus 4.1** (🧠): Anthropic's most advanced reasoning model - Best for complex reasoning tasks
-- **GPT-4 32K** (⚡): OpenAI GPT-4 with 32K context window - Excellent for long documents
-- **GPT-4.5** (🚀): OpenAI's latest GPT-4o model - Most capable for general tasks
-- **o1-pro** (🎯): OpenAI's reasoning model - Optimized for step-by-step problem solving
-- **Gemini 2.5 Pro** (💎): Google's advanced model - Great for multimodal tasks
+- **GPT-5** (🚀): OpenAI's latest model - Most capable for general tasks
+- **o4-mini** (🎯): OpenAI's reasoning model - Optimized for step-by-step problem solving
+- **Gemini 2.5 Flash** (💎): Google's advanced model - Great for multimodal tasks
 
 ### 💰 Transparent Pricing
 - **Dynamic Cost Calculation**: Prices based on actual token usage (input + output)
@@ -36,7 +35,7 @@ Access the world's most advanced AI models:
 ## How It Works
 
 1. **Connect Your Wallet**: Use any Solana wallet (Phantom, Solflare, etc.)
-2. **Select a Model**: Choose from Claude Opus, GPT-4, o1-pro, or Gemini
+2. **Select a Model**: Choose from Claude Opus, GPT-5, o4-mini, or Gemini
 3. **Send Your Message**: Type your query and submit
 4. **Automatic Payment**: x402 handles payment verification (USDC on Solana)
 5. **Get Response**: Receive AI response instantly

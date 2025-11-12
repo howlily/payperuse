@@ -29,7 +29,16 @@ export function useX402API() {
     setIsCalling(true);
 
     try {
-      // First attempt - might get 402
+      // Check if this is a free model before making the request
+      let isFreeModel = false;
+      try {
+        const requestBody = options?.body ? JSON.parse(options.body as string) : {};
+        isFreeModel = requestBody.model === "gemini-2.5-flash";
+      } catch {
+        // If parsing fails, continue normally
+      }
+
+      // First attempt - might get 402 (but shouldn't for free models)
       let response = await fetch(endpoint, {
         ...options,
         headers: {
@@ -38,8 +47,17 @@ export function useX402API() {
         },
       });
 
-      // If we get 402, handle payment
+      // If we get 402, handle payment (skip for free models)
       if (response.status === 402) {
+        // For free models, backend should never return 402, but if it does, return error
+        if (isFreeModel) {
+          const errorData = await response.json();
+          return {
+            error: errorData.error || "Unexpected payment request for free model",
+          };
+        }
+        
+        // Paid model - proceed with payment
         const quoteData = await response.json();
         
         // Make payment: get quote from endpoint, then pay via /api/x402

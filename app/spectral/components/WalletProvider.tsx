@@ -24,8 +24,30 @@ interface WalletContextProviderProps {
 export const WalletContextProvider: FC<WalletContextProviderProps> = ({
   children,
 }) => {
-  // You can also provide a custom RPC endpoint
-  const endpoint = useMemo(() => clusterApiUrl("devnet"), []);
+  // Use Helius RPC if API key is provided, otherwise fall back to default
+  const heliusApiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
+  const customRpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+  const cluster = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || "mainnet-beta";
+  
+  const endpoint = useMemo(() => {
+    // Priority 1: Custom RPC URL
+    if (customRpc) {
+      console.log("Using custom RPC endpoint:", customRpc);
+      return customRpc;
+    }
+    
+    // Priority 2: Helius RPC (if API key is provided)
+    if (heliusApiKey) {
+      const heliusUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`;
+      console.log("Using Helius RPC endpoint");
+      return heliusUrl;
+    }
+    
+    // Priority 3: Default cluster API URL
+    const endpointUrl = clusterApiUrl(cluster as "mainnet-beta" | "devnet" | "testnet");
+    console.log("Using Solana cluster:", cluster, "Endpoint:", endpointUrl);
+    return endpointUrl;
+  }, [heliusApiKey, customRpc, cluster]);
 
   const wallets = useMemo(
     () => [

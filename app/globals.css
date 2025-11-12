@@ -266,7 +266,8 @@ body::before {
 .floating-ca {
   position: fixed;
   top: 20px;
-  left: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 50;
   background: rgba(99, 102, 241, 0.12);
   backdrop-filter: blur(16px);
@@ -286,8 +287,6 @@ body::before {
 }
 
 .floating-ca.ca-centered {
-  left: 50%;
-  transform: translateX(-50%);
   background: rgba(99, 102, 241, 0.18);
   border-color: rgba(129, 140, 248, 0.45);
   box-shadow: 0 0 30px rgba(99, 102, 241, 0.3), 0 0 60px rgba(79, 70, 229, 0.2);
