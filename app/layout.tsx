@@ -13,6 +13,11 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Spectral - Solana AI Assistant",
   description: "AI-powered Solana blockchain assistant with wallet integration",
+  icons: {
+    icon: "/integrations/spectral logo.png",
+    shortcut: "/integrations/spectral logo.png",
+    apple: "/integrations/spectral logo.png",
+  },
 };
 
 export default function RootLayout({

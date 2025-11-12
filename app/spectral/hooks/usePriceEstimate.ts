@@ -48,23 +48,28 @@ export function usePriceEstimate(message: string, model: string, estimatedOutput
         inputCost: 0,
         outputCost: 0,
         totalCost: 0,
-        totalCostWithBuffer: 0.01, // Minimum
+        totalCostWithBuffer: 0.01, // Minimum in USDC
       };
     }
 
     const inputTokens = estimateTokens(message);
     const outputTokens = estimatedOutputTokens;
 
-    const inputCost = (inputTokens / 1_000_000) * pricing.input;
-    const outputCost = (outputTokens / 1_000_000) * pricing.output;
+    // Calculate cost in USD (which equals USDC)
+    const inputCostUSD = (inputTokens / 1_000_000) * pricing.input;
+    const outputCostUSD = (outputTokens / 1_000_000) * pricing.output;
+    const totalCostUSD = inputCostUSD + outputCostUSD;
     
-    const totalCost = inputCost + outputCost;
+    // USDC equals USD (no conversion needed)
+    const inputCost = inputCostUSD;
+    const outputCost = outputCostUSD;
+    const totalCost = totalCostUSD;
     
     // Check if this is a free model
     const isFreeModel = pricing.input === 0 && pricing.output === 0;
     
     // Add 20% buffer for safety (but keep free models at 0)
-    const totalCostWithBuffer = isFreeModel ? 0 : Math.max(totalCost * 1.2, 0.01); // Minimum $0.01 for paid models
+    const totalCostWithBuffer = isFreeModel ? 0 : Math.max(totalCost * 1.2, 0.01); // Minimum 0.01 USDC for paid models
 
     return {
       inputTokens,

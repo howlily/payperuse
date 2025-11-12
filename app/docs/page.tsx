@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSlug from "rehype-slug";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
 
 export default function DocsPage() {
   const [markdown, setMarkdown] = useState("");
   const [loading, setLoading] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/DOCUMENTATION.md")
@@ -21,6 +25,62 @@ export default function DocsPage() {
         setLoading(false);
       });
   }, []);
+
+  // Handle smooth scrolling for anchor links
+  useEffect(() => {
+    if (loading) return;
+
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a[href^="#"]');
+      
+      if (link) {
+        e.preventDefault();
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          const id = href.substring(1);
+          const element = document.getElementById(id);
+          if (element) {
+            const headerOffset = 80; // Account for fixed header
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
+      }
+    };
+
+    // Add click listeners to all anchor links
+    const content = contentRef.current;
+    if (content) {
+      content.addEventListener('click', handleAnchorClick);
+      
+      // Also handle hash in URL on page load
+      if (window.location.hash) {
+        setTimeout(() => {
+          const id = window.location.hash.substring(1);
+          const element = document.getElementById(id);
+          if (element) {
+            const headerOffset = 80;
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }, 100);
+      }
+
+      return () => {
+        content.removeEventListener('click', handleAnchorClick);
+      };
+    }
+  }, [loading]);
 
   return (
     <div className="min-h-screen bg-black text-white font-manrope">
@@ -60,8 +120,14 @@ export default function DocsPage() {
               </div>
             </div>
           ) : (
-            <div className="prose prose-invert prose-lg max-w-none">
+            <div ref={contentRef} className="prose prose-invert prose-lg max-w-none">
               <style jsx global>{`
+                html {
+                  scroll-behavior: smooth;
+                }
+                .prose h1[id], .prose h2[id], .prose h3[id], .prose h4[id] {
+                  scroll-margin-top: 80px;
+                }
                 .prose {
                   color: rgba(255, 255, 255, 0.9);
                 }
@@ -147,6 +213,17 @@ export default function DocsPage() {
                   color: #c084fc;
                   border-bottom-color: #c084fc;
                 }
+                .prose .anchor-link {
+                  color: rgba(168, 85, 247, 0.6);
+                  text-decoration: none;
+                  border: none;
+                  margin-left: 0.5em;
+                  opacity: 1;
+                  transition: color 0.2s;
+                }
+                .prose .anchor-link:hover {
+                  color: #a855f7;
+                }
                 .prose table {
                   width: 100%;
                   border-collapse: collapse;
@@ -172,7 +249,20 @@ export default function DocsPage() {
                   font-weight: 600;
                 }
               `}</style>
-              <ReactMarkdown>{markdown}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[
+                  rehypeSlug,
+                  [rehypeAutolinkHeadings, {
+                    behavior: 'wrap',
+                    properties: {
+                      className: ['anchor-link']
+                    }
+                  }]
+                ]}
+              >
+                {markdown}
+              </ReactMarkdown>
             </div>
           )}
         </div>

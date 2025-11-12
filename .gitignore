@@ -102,6 +102,7 @@ temp/
 # Setup and internal documentation
 GEMINI_SETUP.md
 TESTING.md
+API_SETUP.md
 *SETUP*.md
 *setup*.md
 

@@ -9,7 +9,7 @@ interface APIResponse<T = any> {
   paymentDetails?: {
     signature: string;
     amount: number;
-    amountUSDC: number;
+    amountSOL: number;
     recipient: string;
     explorerUrl: string;
   };
@@ -26,6 +26,7 @@ export function useX402API() {
     endpoint: string,
     options?: RequestInit
   ): Promise<APIResponse<T>> => {
+    console.log("[x402 API] callAPI called for endpoint:", endpoint);
     setIsCalling(true);
 
     try {
@@ -34,11 +35,13 @@ export function useX402API() {
       try {
         const requestBody = options?.body ? JSON.parse(options.body as string) : {};
         isFreeModel = requestBody.model === "gemini-2.5-flash";
+        console.log("[x402 API] Model:", requestBody.model, "Is free:", isFreeModel);
       } catch {
         // If parsing fails, continue normally
       }
 
       // First attempt - might get 402 (but shouldn't for free models)
+      console.log("[x402 API] Making initial request to:", endpoint);
       let response = await fetch(endpoint, {
         ...options,
         headers: {
@@ -47,11 +50,15 @@ export function useX402API() {
         },
       });
 
+      console.log("[x402 API] Initial response status:", response.status);
+
       // If we get 402, handle payment (skip for free models)
       if (response.status === 402) {
+        console.log("[x402 API] Received 402 - payment required");
         // For free models, backend should never return 402, but if it does, return error
         if (isFreeModel) {
           const errorData = await response.json();
+          console.error("[x402 API] Unexpected 402 for free model");
           return {
             error: errorData.error || "Unexpected payment request for free model",
           };
@@ -59,9 +66,12 @@ export function useX402API() {
         
         // Paid model - proceed with payment
         const quoteData = await response.json();
+        console.log("[x402 API] Payment quote received:", quoteData);
+        console.log("[x402 API] Calling makePayment with quote...");
         
-        // Make payment: get quote from endpoint, then pay via /api/x402
-        const paymentResult = await makePayment(endpoint, "/api/x402");
+        // Make payment: pass the quote directly (we already have it from the 402 response)
+        const paymentResult = await makePayment(quoteData, "/api/x402");
+        console.log("[x402 API] Payment result:", paymentResult);
 
         if (!paymentResult.success) {
           return {

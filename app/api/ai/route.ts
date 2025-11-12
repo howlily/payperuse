@@ -24,19 +24,19 @@ const LLM_CONFIG = {
 const MODEL_PRICING: Record<string, { input: number; output: number; provider: string; model: string }> = {
   "claude-opus-4.1": {
     provider: "anthropic",
-    model: "claude-3-opus-20240229", // Using available model, update when 4.1 is available
+    model: "claude-opus-4-1-20250805",
     input: 15.0, // $15 per 1M input tokens
     output: 75.0, // $75 per 1M output tokens
   },
   "gpt-5": {
     provider: "openai",
-    model: "gpt-4o", // Using GPT-4o as GPT-5 doesn't exist yet
+    model: "gpt-5", // Using GPT-4o as GPT-5 doesn't exist yet
     input: 4.5, // $4.5 per 1M input tokens
     output: 6.75, // $6.75 per 1M output tokens
   },
   "o4-mini": {
     provider: "openai",
-    model: "o1-preview", // Using o1-preview as o4-mini doesn't exist yet
+    model: "o4-mini", // Using o1-preview as o4-mini doesn't exist yet
     input: 2.2, // $2.2 per 1M input tokens
     output: 3.3, // $3.3 per 1M output tokens
   },
@@ -53,33 +53,34 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-// Calculate estimated cost in USDC
+// Calculate estimated cost in USDC (direct USD pricing, no conversion needed)
 function calculateEstimatedCost(modelKey: string, message: string, maxOutputTokens: number = 2000): number {
   const pricing = MODEL_PRICING[modelKey];
-  if (!pricing) return 0.01; // Default fallback
+  if (!pricing) return 0.10; // Default fallback in USDC
 
   const inputTokens = estimateTokens(message);
   const estimatedOutputTokens = maxOutputTokens;
 
-  const inputCost = (inputTokens / 1_000_000) * pricing.input;
-  const outputCost = (estimatedOutputTokens / 1_000_000) * pricing.output;
+  // Calculate cost in USD (which equals USDC)
+  const inputCostUSD = (inputTokens / 1_000_000) * pricing.input;
+  const outputCostUSD = (estimatedOutputTokens / 1_000_000) * pricing.output;
+  const totalCostUSD = (inputCostUSD + outputCostUSD) * 1.2; // Add 20% buffer
   
-  // Add 20% buffer for safety
-  const totalCost = (inputCost + outputCost) * 1.2;
-  
-  // Minimum cost of $0.01 USDC
-  return Math.max(totalCost, 0.01);
+  // Minimum cost of 0.01 USDC
+  return Math.max(totalCostUSD, 0.01);
 }
 
-// Calculate actual cost based on token usage
+// Calculate actual cost based on token usage (in USDC)
 function calculateActualCost(modelKey: string, inputTokens: number, outputTokens: number): number {
   const pricing = MODEL_PRICING[modelKey];
-  if (!pricing) return 0.01;
+  if (!pricing) return 0.10;
 
-  const inputCost = (inputTokens / 1_000_000) * pricing.input;
-  const outputCost = (outputTokens / 1_000_000) * pricing.output;
+  // Calculate cost in USD (which equals USDC)
+  const inputCostUSD = (inputTokens / 1_000_000) * pricing.input;
+  const outputCostUSD = (outputTokens / 1_000_000) * pricing.output;
+  const totalCostUSD = inputCostUSD + outputCostUSD;
   
-  return Math.max(inputCost + outputCost, 0.01);
+  return Math.max(totalCostUSD, 0.01);
 }
 
 interface LLMResponse {
@@ -93,8 +94,15 @@ async function callOpenAI(model: string, message: string): Promise<LLMResponse> 
     throw new Error("OpenAI API key not configured");
   }
 
-  // Handle o1/o4 models which use different parameters
-  const isO1Model = model.startsWith("o1") || model.startsWith("o4");
+  console.log(`[OpenAI API] Calling model: ${model}`);
+
+  // Handle different model types which use different parameters
+  const isO1Model = model.startsWith("o1");
+  const isO4Model = model.startsWith("o4");
+  const isGpt5Model = model === "gpt-5" || model.startsWith("gpt-5");
+  
+  console.log(`[OpenAI API] Model type detection - isO1: ${isO1Model}, isO4: ${isO4Model}, isGpt5: ${isGpt5Model}`);
+  
   const requestBody: any = {
     model,
     messages: [
@@ -105,10 +113,22 @@ async function callOpenAI(model: string, message: string): Promise<LLMResponse> 
     ],
   };
 
-  if (!isO1Model) {
+  if (isO4Model || isGpt5Model) {
+    // o4 models and gpt-5 use max_completion_tokens instead of max_tokens
+    // Note: gpt-5 and o4 models don't support temperature parameter (only default value of 1)
+    requestBody.max_completion_tokens = 2000;
+    console.log(`[OpenAI API] Using max_completion_tokens for model: ${model} (no temperature parameter)`);
+  } else if (!isO1Model) {
+    // Regular older models (gpt-4, etc.) use max_tokens and temperature
     requestBody.temperature = 0.7;
     requestBody.max_tokens = 2000;
+    console.log(`[OpenAI API] Using max_tokens and temperature for model: ${model}`);
+  } else {
+    console.log(`[OpenAI API] No max_tokens/max_completion_tokens for o1 model: ${model}`);
   }
+  // o1 models don't need max_tokens or max_completion_tokens
+  
+  console.log(`[OpenAI API] Request body:`, JSON.stringify(requestBody, null, 2));
 
   const response = await fetch(`${LLM_CONFIG.openai.baseURL}/chat/completions`, {
     method: "POST",
@@ -367,15 +387,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(quote, { status: 402 });
       }
       
-      // Fallback quote
+      // Fallback quote - need to get recipient token account
+      const { getAssociatedTokenAddress } = await import("@solana/spl-token");
+      const { PublicKey } = await import("@solana/web3.js");
+      const USDC_MINT_MAINNET = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+      const USDC_MINT_DEVNET = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+      const USDC_DECIMALS = 6;
+      const cluster = process.env.SOLANA_CLUSTER || "mainnet-beta";
+      const usdcMint = cluster === "mainnet-beta" ? USDC_MINT_MAINNET : USDC_MINT_DEVNET;
+      const recipientWallet = new PublicKey(process.env.X402_RECIPIENT_WALLET || "seFkxFkXEY9JGEpCyPfCWTuPZG9WK6ucf95zvKCfsRX");
+      const recipientTokenAccount = await getAssociatedTokenAddress(usdcMint, recipientWallet);
+      const amountUSDC = Math.floor(estimatedCost * Math.pow(10, USDC_DECIMALS)); // Convert to smallest units
+      
       return NextResponse.json(
         {
           payment: {
-            recipientWallet: process.env.X402_RECIPIENT_WALLET || "seFkxFkXEY9JGEpCyPfCWTuPZG9WK6ucf95zvKCfsRX",
-            amount: estimatedCost,
+            recipientWallet: recipientWallet.toBase58(),
+            tokenAccount: recipientTokenAccount.toBase58(),
+            mint: usdcMint.toBase58(),
+            amount: amountUSDC, // Amount in USDC smallest units (6 decimals)
             amountUSDC: estimatedCost,
-            cluster: process.env.SOLANA_CLUSTER || "devnet",
-            message: `Payment required: ${estimatedCost.toFixed(4)} USDC for ${modelKey}`,
+            cluster: cluster,
+            message: `Payment required: ${estimatedCost.toFixed(2)} USDC for ${modelKey}`,
             scheme: "exact",
             model: modelKey,
             estimatedTokens: estimateTokens(message),
@@ -407,7 +440,7 @@ export async function POST(request: NextRequest) {
     }
 
     const paymentData = await verifyResponse.json();
-    const paidAmount = paymentData.paymentDetails?.amountUSDC || 0.01;
+    const paidAmount = paymentData.paymentDetails?.amountUSDC || 0.10;
 
     // Payment verified successfully - now call the LLM
     const providerConfig = LLM_CONFIG[modelConfig.provider as keyof typeof LLM_CONFIG];
@@ -440,7 +473,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Insufficient payment",
-          details: `Paid ${paidAmount.toFixed(4)} USDC, but actual cost is ${actualCost.toFixed(4)} USDC`,
+          details: `Paid ${paidAmount.toFixed(2)} USDC, but actual cost is ${actualCost.toFixed(2)} USDC`,
           actualCost,
           paidAmount,
         },

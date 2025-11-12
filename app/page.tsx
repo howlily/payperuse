@@ -44,7 +44,7 @@ export default function Home() {
       <main className="relative w-full h-screen overflow-hidden">
         <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
           <Spline
-            scene="https://prod.spline.design/6uqMJyPgvxXlgk2U/scene.splinecode"
+            scene="https://prod.spline.design/pZDzapvpDSEgc8VP/scene.splinecode"
           />
         </div>
         

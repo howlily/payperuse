@@ -3,7 +3,12 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState, useCallback } from "react";
 import { PublicKey } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
+
+// USDC mint addresses
+const USDC_MINT_MAINNET = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+const USDC_MINT_DEVNET = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+const USDC_DECIMALS = 6;
 
 interface TokenAccount {
   mint: string;
@@ -29,15 +34,27 @@ export function useWalletBalance() {
     try {
       setLoading(true);
       
-      console.log("Fetching balance for:", publicKey.toBase58());
+      console.log("Fetching USDC balance for:", publicKey.toBase58());
       console.log("Connection endpoint:", connection.rpcEndpoint);
       
-      // Fetch SOL balance with confirmed commitment for faster response
-      const solBalance = await connection.getBalance(publicKey, "confirmed");
-      const solAmount = solBalance / 1e9; // Convert lamports to SOL
-      setBalance(solAmount);
+      // Determine USDC mint based on network
+      const isMainnet = connection.rpcEndpoint.includes("mainnet") || connection.rpcEndpoint.includes("helius-rpc.com");
+      const usdcMint = isMainnet ? USDC_MINT_MAINNET : USDC_MINT_DEVNET;
       
-      console.log("SOL Balance fetched:", solAmount, "SOL (", solBalance, "lamports)");
+      // Get USDC token account
+      try {
+        const usdcTokenAccount = await getAssociatedTokenAddress(usdcMint, publicKey);
+        const tokenAccountInfo = await getAccount(connection, usdcTokenAccount);
+        const usdcBalance = Number(tokenAccountInfo.amount);
+        const usdcAmount = usdcBalance / Math.pow(10, USDC_DECIMALS); // Convert to USDC
+        setBalance(usdcAmount);
+        
+        console.log("USDC Balance fetched:", usdcAmount, "USDC (", usdcBalance, "smallest units)");
+      } catch (error) {
+        // Token account doesn't exist or error fetching
+        console.log("USDC token account not found or error:", error);
+        setBalance(0);
+      }
 
       // Fetch token accounts
       try {

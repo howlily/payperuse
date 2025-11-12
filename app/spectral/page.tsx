@@ -31,10 +31,8 @@ function SpectralAgentContent() {
     }
   }, [chatHistory, isLoadingAI]);
   
-  // Get USDC balance (mainnet USDC mint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v)
-  const USDC_MINT_MAINNET = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-  const usdcToken = tokens.find(token => token.mint === USDC_MINT_MAINNET);
-  const usdcBalance = usdcToken?.uiAmount || 0;
+  // Get USDC balance (already in USDC from useWalletBalance hook)
+  const usdcBalance = balance; // balance is already in USDC
   const isFreeModel = priceEstimate.totalCostWithBuffer === 0;
   const hasEnoughUSDC = isFreeModel || usdcBalance >= priceEstimate.totalCostWithBuffer;
 
@@ -85,7 +83,7 @@ function SpectralAgentContent() {
         timestamp: new Date().toISOString()
       }, {
         role: "assistant",
-        content: `Error: Insufficient USDC balance. You have ${usdcBalance.toFixed(4)} USDC, but need ${priceEstimate.totalCostWithBuffer.toFixed(4)} USDC`
+        content: `Error: Insufficient USDC balance. You have ${usdcBalance.toFixed(2)} USDC, but need ${priceEstimate.totalCostWithBuffer.toFixed(2)} USDC`
       }]);
       setMessage("");
       return;
@@ -122,31 +120,13 @@ function SpectralAgentContent() {
         // Handle both direct data and nested data.data structure
         const data = result.data.data || result.data;
         const responseText = data.response || data.content || "";
-        const usage = data.usage;
-        const cost = data.cost;
         
         console.log("[Frontend] API Response:", { result, data, responseText });
         
-        // Format response with usage and cost info
-        let formattedResponse = responseText;
-        if (usage || cost) {
-          formattedResponse += "\n\n---\n";
-          if (usage) {
-            formattedResponse += `\n📊 Tokens Used:\n`;
-            formattedResponse += `  Input: ${usage.inputTokens.toLocaleString()} tokens\n`;
-            formattedResponse += `  Output: ${usage.outputTokens.toLocaleString()} tokens\n`;
-            formattedResponse += `  Total: ${usage.totalTokens.toLocaleString()} tokens\n`;
-          }
-          if (cost && cost.actual > 0) {
-            formattedResponse += `\n💰 Cost:\n`;
-            formattedResponse += `  Estimated: $${cost.estimated.toFixed(4)} ${cost.currency}\n`;
-            formattedResponse += `  Actual: $${cost.actual.toFixed(4)} ${cost.currency}\n`;
-          }
-        }
-        
+        // Use the raw response text without adding usage/cost info
         setChatHistory(prev => [...prev, {
           role: "assistant",
-          content: formattedResponse,
+          content: responseText,
           timestamp: new Date().toISOString()
         }]);
       }
@@ -190,7 +170,7 @@ function SpectralAgentContent() {
         <>
           {/* @ts-ignore - spline-viewer is a custom element */}
           <spline-viewer
-            url="https://prod.spline.design/2eYe3ADwe-ruRfl6/scene.splinecode"
+            url="https://prod.spline.design/S9aIYTNb0N0G4qYn/scene.splinecode"
             style={{
               position: 'fixed',
               top: 0,
@@ -323,20 +303,18 @@ function SpectralAgentContent() {
               >
                 <img src="/integrations/geminilogo.png" alt="Gemini" className="absolute top-3 right-3 w-6 h-6 object-contain opacity-80" />
                 <h3 className="text-2xl font-semibold text-white mb-2 font-manrope">Gemini 2.5 Flash</h3>
-                <div className="mb-1">
-                  <div className="text-lg font-bold text-white mb-0.5 font-manrope">$5.625</div>
-                  <p className="text-white/70 text-xs font-manrope leading-tight">per 1M tokens</p>
-                  <p className="text-white/60 text-xs font-manrope leading-tight">(&lt; 200K tokens)</p>
-                  <p className="text-white/60 text-xs font-manrope leading-tight">$0.000005625/token</p>
+                <div className="mb-3">
+                  <div className="text-2xl font-bold text-white mb-1 font-manrope">FREE</div>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">No payment required</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight mt-1">✓ Free tier available</p>
                 </div>
-                <div className="mb-2">
-                  <div className="text-lg font-bold text-white mb-0.5 font-manrope">$8.75</div>
-                  <p className="text-white/70 text-xs font-manrope leading-tight">per 1M tokens</p>
-                  <p className="text-white/60 text-xs font-manrope leading-tight">(&gt; 200K tokens)</p>
-                  <p className="text-white/60 text-xs font-manrope leading-tight">$0.00000875/token</p>
-                </div>
-                <div className="border-t border-white/10 pt-2">
-                  <p className="text-white/80 text-xs font-manrope leading-tight mb-1"><span className="font-semibold">Best for:</span> Fast responses, multimodal tasks, and cost-effective solutions</p>
+                <div className="border-t border-white/10 pt-2 mb-2">
+                  <p className="text-white/80 text-xs font-manrope leading-tight mb-2"><span className="font-semibold">Best for:</span> Fast responses, multimodal tasks, and cost-effective solutions</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight mb-1">• Ultra-fast response times</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight mb-1">• Multimodal capabilities (text, images)</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight mb-1">• Optimized for efficiency</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight mb-1">• Great for quick queries</p>
+                  <p className="text-white/70 text-xs font-manrope leading-tight">• No wallet connection needed</p>
                 </div>
               </div>
             </div>
@@ -353,7 +331,7 @@ function SpectralAgentContent() {
             {/* Left Sidebar */}
             <aside className="w-80 transparent-container rounded-xl p-6 overflow-y-auto flex flex-col">
               <div className="flex-1">
-                {/* SOL Balance */}
+                {/* USDC Balance */}
                 <div className="mb-4 pb-4 border-b border-purple-500/30">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -379,7 +357,7 @@ function SpectralAgentContent() {
                           </linearGradient>
                         </defs>
                       </svg>
-                      <h2 className="text-sm font-semibold text-white font-manrope">SOL Balance</h2>
+                      <h2 className="text-sm font-semibold text-white font-manrope">USDC Balance</h2>
                     </div>
                     <button className="p-1 hover:bg-gray-800 rounded">
                       <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -390,7 +368,7 @@ function SpectralAgentContent() {
                   <div className="transparent-container rounded-lg p-3 border border-purple-500/20">
                     <p className="text-xs text-gray-200 mb-0.5 font-manrope">Balance</p>
                     <p className="text-lg font-bold text-white font-manrope">
-                      {loading ? "..." : balance.toFixed(4)} SOL
+                      {loading ? "..." : balance.toFixed(2)} USDC
                     </p>
                   </div>
                 </div>
@@ -637,7 +615,7 @@ function SpectralAgentContent() {
                               ) : (
                                 <>
                                   <span className={`text-sm font-bold font-manrope ${hasEnoughUSDC ? 'text-green-400' : 'text-red-400'}`}>
-                                    ${priceEstimate.totalCostWithBuffer.toFixed(4)} USDC
+                                    {priceEstimate.totalCostWithBuffer.toFixed(2)} USDC
                                   </span>
                                   {!hasEnoughUSDC && connected && (
                                     <span className="text-xs text-red-400 font-manrope">Insufficient</span>
@@ -649,12 +627,12 @@ function SpectralAgentContent() {
                           {!isFreeModel && (
                             <>
                               <div className="flex items-center justify-between text-xs text-white/60 font-manrope">
-                                <span>Input: ~{priceEstimate.inputTokens.toLocaleString()} tokens (${priceEstimate.inputCost.toFixed(4)})</span>
-                                <span>Output: ~{priceEstimate.outputTokens.toLocaleString()} tokens (${priceEstimate.outputCost.toFixed(4)})</span>
+                                <span>Input: ~{priceEstimate.inputTokens.toLocaleString()} tokens (${priceEstimate.inputCost.toFixed(2)} USDC)</span>
+                                <span>Output: ~{priceEstimate.outputTokens.toLocaleString()} tokens (${priceEstimate.outputCost.toFixed(2)} USDC)</span>
                               </div>
                               {connected && (
                                 <div className="mt-2 pt-2 border-t border-white/10 text-xs text-white/50 font-manrope">
-                                  USDC Balance: {usdcBalance.toFixed(4)} USDC
+                                  USDC Balance: {usdcBalance.toFixed(2)} USDC
                                 </div>
                               )}
                             </>
@@ -706,7 +684,7 @@ function SpectralAgentContent() {
                           e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                           e.currentTarget.style.transform = 'scale(1)';
                         }}
-                        title={isFreeModel ? "Send message (Free)" : (!connected ? "Connect wallet to send" : !hasEnoughUSDC ? `Need ${priceEstimate.totalCostWithBuffer.toFixed(4)} USDC` : "Send message")}
+                        title={isFreeModel ? "Send message (Free)" : (!connected ? "Connect wallet to send" : !hasEnoughUSDC ? `Need ${priceEstimate.totalCostWithBuffer.toFixed(2)} USDC` : "Send message")}
                       >
                         {(isLoadingAI || (isProcessingPayment && !isFreeModel)) ? (
                           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
