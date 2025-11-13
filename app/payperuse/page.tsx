@@ -170,7 +170,7 @@ function PayPerUseAgentContent() {
         <>
           {/* @ts-ignore - spline-viewer is a custom element */}
           <spline-viewer
-            url="https://prod.spline.design/S9aIYTNb0N0G4qYn/scene.splinecode"
+            url="https://prod.spline.design/Re-0bj0XGmLDi8JG/scene.splinecode"
             style={{
               position: 'fixed',
               top: 0,
