@@ -89,7 +89,7 @@ export default function DocsPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
             <img 
-              src="/integrations/spectral logo.png" 
+              src="/integrations/payperuse.png" 
               alt="PayPerUse Logo" 
               className="h-8 w-8 object-contain"
             />

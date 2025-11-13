@@ -14,9 +14,9 @@ export const metadata: Metadata = {
   title: "PayPerUse - AI Partner Powered by x402",
   description: "AI-powered Solana blockchain assistant with wallet integration",
   icons: {
-    icon: "/integrations/spectral logo.png",
-    shortcut: "/integrations/spectral logo.png",
-    apple: "/integrations/spectral logo.png",
+    icon: "/integrations/payperuse.png",
+    shortcut: "/integrations/payperuse.png",
+    apple: "/integrations/payperuse.png",
   },
 };
 

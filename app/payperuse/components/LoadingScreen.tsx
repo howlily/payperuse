@@ -30,7 +30,7 @@ export default function LoadingScreen() {
       <div className="text-center">
         <div className="flex items-center justify-center mb-6">
           <img 
-            src="/integrations/spectral logo.png" 
+            src="/integrations/payperuse.png" 
             alt="PayPerUse Logo" 
             className="w-24 h-24 animate-spin"
             style={{ animationDuration: '2s' }}
