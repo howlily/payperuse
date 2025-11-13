@@ -159,7 +159,7 @@ body::before {
   display: none;
 }
 
-/* Glass morphism with grain and blue tint for spectral page */
+/* Glass morphism with grain and blue tint for payperuse page */
 .glass-morphism {
   background: rgba(59, 130, 246, 0.1);
   backdrop-filter: blur(20px);

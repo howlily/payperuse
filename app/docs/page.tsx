@@ -90,13 +90,13 @@ export default function DocsPage() {
           <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
             <img 
               src="/integrations/spectral logo.png" 
-              alt="Spectral Logo" 
+              alt="PayPerUse Logo" 
               className="h-8 w-8 object-contain"
             />
-            <span className="ml-3 text-white font-semibold">Spectral 402</span>
+            <span className="ml-3 text-white font-semibold">PayPerUse</span>
           </Link>
           <nav className="flex items-center gap-6">
-            <Link href="/spectral" className="text-white/90 hover:text-purple-400 transition-colors font-manrope">
+            <Link href="/payperuse" className="text-white/90 hover:text-purple-400 transition-colors font-manrope">
               App
             </Link>
             <a href="https://github.com/howlily/spectral402" target="_blank" rel="noopener noreferrer" className="text-white/90 hover:text-purple-400 transition-colors font-manrope">

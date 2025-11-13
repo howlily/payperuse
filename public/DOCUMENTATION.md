@@ -1,9 +1,9 @@
-# Spectral 402 - Complete Documentation
+# PayPerUse - Complete Documentation
 
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [What is Spectral 402?](#what-is-spectral-402)
+2. [What is PayPerUse?](#what-is-payperuse)
 3. [Key Features](#key-features)
 4. [How It Works](#how-it-works)
 5. [Getting Started](#getting-started)
@@ -20,9 +20,9 @@
 
 ## Introduction
 
-Spectral 402 is a decentralized AI assistant platform that provides pay-as-you-go access to premium Large Language Models (LLMs) using the x402 payment protocol on Solana. Unlike traditional AI services that require monthly subscriptions or API key management, Spectral 402 enables instant, wallet-based access to the world's most advanced AI models.
+PayPerUse is a decentralized AI assistant platform that provides pay-as-you-go access to premium Large Language Models (LLMs) using the x402 payment protocol on Solana. Unlike traditional AI services that require monthly subscriptions or API key management, PayPerUse enables instant, wallet-based access to the world's most advanced AI models.
 
-### Why Spectral 402?
+### Why PayPerUse?
 
 - **No Subscriptions**: Pay only for what you use
 - **No API Keys**: Your wallet is your identity
@@ -32,9 +32,9 @@ Spectral 402 is a decentralized AI assistant platform that provides pay-as-you-g
 
 ---
 
-## What is Spectral 402?
+## What is PayPerUse?
 
-Spectral 402 is a web application that bridges the gap between decentralized payments and AI services. It allows users to:
+PayPerUse is a web application that bridges the gap between decentralized payments and AI services. It allows users to:
 
 1. Connect their Solana wallet (Phantom, Solflare, etc.)
 2. Select from premium AI models (GPT-5, Claude Opus, o4-mini, Gemini)
@@ -174,7 +174,7 @@ Response + Usage Stats Returned
 ### Quick Start
 
 1. **Visit the Application**
-   - Navigate to the Spectral 402 website
+   - Navigate to the PayPerUse website
    - Click "Get Started" on the homepage
 
 2. **Connect Your Wallet**
@@ -326,7 +326,7 @@ x402 is an internet-native payment standard that enables autonomous, wallet-base
 - **Standardized Format**: Works across different services
 - **Blockchain Agnostic**: Can work on multiple chains
 
-### How x402 Works in Spectral 402
+### How x402 Works in PayPerUse
 
 1. **Payment Request (402 Status)**
    - Service returns HTTP 402 status code
@@ -724,7 +724,7 @@ A: Varies by model. Most support up to 32K tokens for input.
 
 ## Conclusion
 
-Spectral 402 represents the future of AI access: decentralized, transparent, and user-controlled. By combining the power of Solana's fast blockchain with the x402 payment protocol, we've created a seamless experience for accessing premium AI models.
+PayPerUse represents the future of AI access: decentralized, transparent, and user-controlled. By combining the power of Solana's fast blockchain with the x402 payment protocol, we've created a seamless experience for accessing premium AI models.
 
 ### Key Takeaways
 

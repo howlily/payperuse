@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import Spline from '@splinetool/react-spline/next';
-import LoadingScreen from './spectral/components/LoadingScreen';
+import LoadingScreen from './payperuse/components/LoadingScreen';
 
 export default function Home() {
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function Home() {
       <main className="relative w-full h-screen overflow-hidden">
         <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
           <Spline
-            scene="https://prod.spline.design/pZDzapvpDSEgc8VP/scene.splinecode"
+            scene="https://prod.spline.design/mjkKwtlwZIq008Rf/scene.splinecode"
           />
         </div>
         
@@ -70,7 +70,7 @@ export default function Home() {
           <div className="text-center">
             <p className="font-manrope text-white/80 text-sm mb-4">Made in Stockholm, Sweden</p>
             <Link
-              href="/spectral"
+              href="/payperuse"
               className="relative px-12 py-5 flex items-center justify-center backdrop-blur-sm text-white rounded-full font-manrope font-semibold text-xl overflow-hidden group animate-breathe-button btn-rainbow-hover"
             >
               <span className="relative z-10">Get Started</span>
