@@ -71,7 +71,22 @@ export default function Home() {
             <p className="font-manrope text-white/80 text-sm mb-4">Made in Stockholm, Sweden</p>
             <Link
               href="/payperuse"
-              className="relative px-12 py-5 flex items-center justify-center backdrop-blur-sm text-white rounded-full font-manrope font-semibold text-xl overflow-hidden group animate-breathe-button btn-rainbow-hover"
+              className="relative px-12 py-5 flex items-center justify-center text-white rounded-full font-manrope font-semibold text-xl overflow-hidden group transition-all duration-300 hover:scale-105"
+              style={{
+                background: '#2EE671',
+                border: '2px solid #2EE671',
+                boxShadow: '0 0 20px rgba(46, 230, 113, 0.4)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#25d162';
+                e.currentTarget.style.borderColor = '#25d162';
+                e.currentTarget.style.boxShadow = '0 0 30px rgba(46, 230, 113, 0.6)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#2EE671';
+                e.currentTarget.style.borderColor = '#2EE671';
+                e.currentTarget.style.boxShadow = '0 0 20px rgba(46, 230, 113, 0.4)';
+              }}
             >
               <span className="relative z-10">Get Started</span>
             </Link>
