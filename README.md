@@ -98,6 +98,10 @@ Pricing is calculated based on **actual token usage**:
 | o4-mini | $2.20 | $3.30 |
 | Gemini 2.5 Flash | FREE | FREE |
 
+## 📝 Contract Address
+
+**Contract Address**: `6z4aGvKAuqbdXoUaHw4VEUq6mU8WpmgPG3sC4dkspump`
+
 ## 🔐 x402 Payment Protocol
 
 PayPerUse uses the **x402 payment standard**, an internet-native payment protocol that enables:

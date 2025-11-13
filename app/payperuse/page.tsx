@@ -43,7 +43,7 @@ function PayPerUseAgentContent() {
   };
 
   const handleCAClick = async () => {
-    const address = "4aqKVt8worERRjysAziBuyXKtrJyV1DLFWfJrVY4pump";
+    const address = "6z4aGvKAuqbdXoUaHw4VEUq6mU8WpmgPG3sC4dkspump";
     try {
       await navigator.clipboard.writeText(address);
       setCaCopied(true);
@@ -211,7 +211,7 @@ function PayPerUseAgentContent() {
         onClick={handleCAClick}
       >
         <span className="text-xs font-medium text-white/80 font-manrope tracking-wider">
-          {caCopied ? 'Copied!' : '4aqKVt8worERRjysAziBuyXKtrJyV1DLFWfJrVY4pump'}
+          {caCopied ? 'Copied!' : '6z4aGvKAuqbdXoUaHw4VEUq6mU8WpmgPG3sC4dkspump'}
         </span>
       </div>
 
